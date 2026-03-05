@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}จอง {{ room_name }} | {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="book-page">
+    <a href="{{ url_for('rooms') }}" class="book-back">
+        <i class="fa-solid fa-arrow-left"></i> กลับไปเลือกห้อง
+    </a>
+
+    <div class="booking-container">
+        <div class="booking-summary">
+            <div class="booking-room-img">
+                <img src="{{ url_for('static', filename=room_image) }}" alt="{{ room_name }}" onerror="this.src='/static/images/default.jpg'">
+            </div>
+            <h2>{{ room_name }}</h2>
+        </div>
+
+        <div class="card booking-form-card">
+            <form action="{{ url_for('book', room_id=room_id) }}" method="POST" class="book-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="checkin">วันที่เข้าพัก</label>
+                        <input type="date" name="checkin" id="checkin" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="checkout">วันที่ออก</label>
+                        <input type="date" name="checkout" id="checkout" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">ชื่อผู้จอง</label>
+                        <input type="text" name="name" id="name" value="{{ user_name or '' }}" placeholder="ชื่อ-นามสกุล" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">เบอร์โทร</label>
+                        <input type="tel" name="phone" id="phone" value="{{ user_phone or '' }}" pattern="[0-9]{9,10}" maxlength="10" placeholder="{{ business.phone_tel }}" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="guests">จำนวนผู้เข้าพัก</label>
+                        <select name="guests" id="guests" required>
+                            <option value="" disabled selected>เลือก</option>
+                            {% for i in range(1,6) %}
+                            <option value="{{ i }}">{{ i }} คน</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn primary btn-block">
+                    <i class="fa-solid fa-check"></i> ยืนยันการจอง
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkin = document.getElementById('checkin');
+    const checkout = document.getElementById('checkout');
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (checkin) checkin.min = today;
+    
+    if (checkin && checkout) {
+        checkin.addEventListener('change', function() {
+            if (this.value) {
+                checkout.min = this.value;
+                if (checkout.value && checkout.value < this.value) checkout.value = this.value;
+            }
+        });
+        checkout.addEventListener('change', function() {
+            if (checkin.value && this.value <= checkin.value) this.value = checkin.value;
+        });
+    }
+});
+</script>
+{% endblock %}

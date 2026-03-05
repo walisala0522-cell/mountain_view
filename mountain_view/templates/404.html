@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}ไม่พบหน้า | {{ business.name }}{% endblock %}
+{% block content %}
+<div class="empty-state" style="min-height: 50vh;">
+    <i class="fa-solid fa-mountain-sun"></i>
+    <h1 style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 0.5rem;">404</h1>
+    <h3>ไม่พบหน้าที่คุณต้องการ</h3>
+    <p>อาจมีการย้ายหรือลบหน้านี้ไปแล้ว</p>
+    <a href="{{ url_for('home') }}" class="btn primary">
+        <i class="fa-solid fa-house" style="margin-right: 8px;"></i> กลับหน้าหลัก
+    </a>
+</div>
+{% endblock %}

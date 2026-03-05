@@ -1,0 +1,259 @@
+{% extends "admin_base.html" %}
+{% block title %}จัดการห้องพัก | {{ business.name }} Admin{% endblock %}
+
+{% block admin_content %}
+<nav class="admin-breadcrumb">
+    <a href="{{ url_for('admin') }}">แอดมิน</a>
+    <span>/</span>
+    <span>จัดการห้องพัก</span>
+</nav>
+<header class="admin-page-header">
+    <h1>จัดการห้องพัก</h1>
+    <p class="admin-page-subtitle">เพิ่ม แก้ไข ราคา และรูปภาพห้อง</p>
+</header>
+
+<div class="admin-card admin-card-add-room">
+    <div class="admin-card-header admin-card-header-row">
+        <h3><i class="fa-solid fa-plus-circle"></i> เพิ่มห้องใหม่</h3>
+    </div>
+    <div class="admin-card-body">
+        <form method="POST" class="admin-add-room">
+            <input type="hidden" name="add_room" value="1">
+            <input type="text" name="room_name" placeholder="ชื่อห้อง" required class="input-room-name">
+            <input type="number" name="price" placeholder="ราคา/คืน (บาท)" required min="0" class="input-price">
+            <button type="submit" class="btn btn-primary btn-add-room"><i class="fa-solid fa-plus"></i> เพิ่มห้อง</button>
+        </form>
+    </div>
+</div>
+
+<div class="admin-card admin-card-rooms">
+    <div class="admin-card-header admin-card-header-row">
+        <h3><i class="fa-solid fa-door-open"></i> รายการห้องพัก</h3>
+        <span class="admin-card-meta">{{ rooms_available|length }} ว่าง · {{ rooms_occupied|length }} มีคนจอง/ใช้งาน</span>
+    </div>
+
+    {% if rooms_available %}
+    <div class="admin-rooms-section">
+        <h4 class="admin-section-title"><i class="fa-solid fa-sun"></i> ห้องว่าง ({{ rooms_available|length }})</h4>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ห้อง</th>
+                        <th>ราคา</th>
+                        <th>สถานะ</th>
+                        <th>สิ่งอำนวยความสะดวก</th>
+                        <th>รูป</th>
+                        <th class="th-actions">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for room in rooms_available %}
+                <tr>
+                    <td class="cell-primary cell-room-name">{{ room.room_name }}</td>
+                    <td>
+                        <form action="{{ url_for('update_price', room_id=room.room_id) }}" method="POST" class="inline-form">
+                            <input type="number" name="price" value="{{ room.price }}" required min="0" class="input-price-inline">
+                            <button type="submit" class="btn btn-icon btn-save" title="บันทึก"><i class="fa-solid fa-check"></i></button>
+                        </form>
+                    </td>
+                    <td>
+                        {% if room.status == "ว่าง" %}
+                        <span class="badge badge-paid">ว่าง</span>
+                        {% else %}
+                        <span class="badge badge-error">ไม่ว่าง</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline open-facilities-btn" data-room-id="{{ room.room_id }}" data-facilities="{{ room.my_facilities|tojson|e }}">
+                            <i class="fa-solid fa-list-check"></i> {{ room.my_facilities|length }}
+                        </button>
+                    </td>
+                    <td>
+                        <button type="button" onclick="openImageModal('{{ room.room_id }}')" class="btn btn-sm btn-outline">
+                            <i class="fa-solid fa-images"></i> {{ room.img_count }}
+                        </button>
+                    </td>
+                    <td class="cell-actions">
+                        <div class="btn-group">
+                            <a href="{{ url_for('toggle_status', room_id=room.room_id) }}" class="btn btn-icon {{ 'btn-danger' if room.status == 'ว่าง' else 'btn-success' }}" title="{{ 'ปิดห้อง' if room.status == 'ว่าง' else 'เปิดห้อง' }}">
+                                <i class="fa-solid fa-power-off"></i>
+                            </a>
+                            <a href="{{ url_for('delete_room', room_id=room.room_id) }}" onclick="return confirm('ยืนยันลบห้องนี้?');" class="btn btn-icon btn-ghost" title="ลบ">
+                                <i class="fa-solid fa-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if rooms_occupied %}
+    <div class="admin-rooms-section">
+        <h4 class="admin-section-title"><i class="fa-solid fa-person-shelter"></i> ห้องที่มีคนจอง/ใช้งาน ({{ rooms_occupied|length }})</h4>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ห้อง</th>
+                        <th>ราคา</th>
+                        <th>สถานะ</th>
+                        <th>สิ่งอำนวยความสะดวก</th>
+                        <th>รูป</th>
+                        <th class="th-actions">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for room in rooms_occupied %}
+                <tr>
+                    <td class="cell-primary cell-room-name">{{ room.room_name }}</td>
+                    <td>
+                        <form action="{{ url_for('update_price', room_id=room.room_id) }}" method="POST" class="inline-form">
+                            <input type="number" name="price" value="{{ room.price }}" required min="0" class="input-price-inline">
+                            <button type="submit" class="btn btn-icon btn-save" title="บันทึก"><i class="fa-solid fa-check"></i></button>
+                        </form>
+                    </td>
+                    <td>
+                        {% if room.status == "ว่าง" %}
+                        <span class="badge badge-paid">ว่าง</span>
+                        {% elif room.status == "มีคนใช้งานอยู่" %}
+                        <span class="badge badge-staying">มีคนใช้งานอยู่</span>
+                        {% else %}
+                        <span class="badge badge-error">ไม่ว่าง</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline open-facilities-btn" data-room-id="{{ room.room_id }}" data-facilities="{{ room.my_facilities|tojson|e }}">
+                            <i class="fa-solid fa-list-check"></i> {{ room.my_facilities|length }}
+                        </button>
+                    </td>
+                    <td>
+                        <button type="button" onclick="openImageModal('{{ room.room_id }}')" class="btn btn-sm btn-outline">
+                            <i class="fa-solid fa-images"></i> {{ room.img_count }}
+                        </button>
+                    </td>
+                    <td class="cell-actions">
+                        <div class="btn-group">
+                            <a href="{{ url_for('toggle_status', room_id=room.room_id) }}" class="btn btn-icon {{ 'btn-danger' if room.status == 'ว่าง' else 'btn-success' }}" title="{{ 'ปิดห้อง' if room.status == 'ว่าง' else 'เปิดห้อง' }}">
+                                <i class="fa-solid fa-power-off"></i>
+                            </a>
+                            <a href="{{ url_for('delete_room', room_id=room.room_id) }}" onclick="return confirm('ยืนยันลบห้องนี้?');" class="btn btn-icon btn-ghost" title="ลบ">
+                                <i class="fa-solid fa-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not rooms_available and not rooms_occupied %}
+    <div class="admin-empty">
+        <i class="fa-solid fa-bed"></i>
+        <p>ยังไม่มีห้องพัก — เพิ่มห้องใหม่ด้านบน</p>
+    </div>
+    {% endif %}
+</div>
+
+<div id="facilitiesModal" class="modal-overlay" onclick="if(event.target===this) document.getElementById('facilitiesModal').classList.remove('open')">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-list-check"></i> สิ่งอำนวยความสะดวก</h3>
+            <button type="button" class="modal-close-inner" onclick="document.getElementById('facilitiesModal').classList.remove('open')" aria-label="ปิด"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="update_facilities" value="1">
+            <input type="hidden" id="fac_room_id" name="room_id">
+            <div class="facilities-grid">
+                {% for fac in all_facilities %}
+                <label class="facility-check">
+                    <input type="checkbox" name="facilities[]" value="{{ fac.id }}" class="fac-checkbox">
+                    <span><i class="{{ fac.icon_class }}"></i> {{ fac.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="document.getElementById('facilitiesModal').classList.remove('open')" class="btn btn-outline">ยกเลิก</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> บันทึก</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="imageModal" class="modal-overlay" onclick="if(event.target===this) document.getElementById('imageModal').classList.remove('open')">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-images"></i> อัปโหลดรูปภาพ</h3>
+            <button type="button" class="modal-close-inner" onclick="document.getElementById('imageModal').classList.remove('open')" aria-label="ปิด"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="upload_image" value="1">
+            <input type="hidden" id="img_room_id" name="room_id">
+            <div class="form-group">
+                <label class="form-label">เลือกไฟล์รูป (ได้หลายไฟล์)</label>
+                <input type="file" name="images[]" multiple accept="image/*" required class="input-file">
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="document.getElementById('imageModal').classList.remove('open')" class="btn btn-outline">ยกเลิก</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-upload"></i> อัปโหลด</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    document.querySelectorAll('.open-facilities-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+
+            var fac = this.dataset.facilities;
+            var list = [];
+
+            if (fac) {
+                try {
+                    list = JSON.parse(fac);
+                } catch (e) {
+                    list = [];
+                }
+            }
+
+            openFacilitiesModal(this.dataset.roomId, list);
+        });
+    });
+
+});
+
+
+function openFacilitiesModal(roomId, currentFacilities) {
+
+    document.getElementById('fac_room_id').value = roomId;
+
+    document.querySelectorAll('.fac-checkbox').forEach(function (cb) {
+
+        var id = parseInt(cb.value, 10);
+
+        cb.checked = Array.isArray(currentFacilities)
+            && currentFacilities.indexOf(id) !== -1;
+    });
+
+    document.getElementById('facilitiesModal').classList.add('open');
+}
+
+
+function openImageModal(roomId) {
+
+    document.getElementById('img_room_id').value = roomId;
+    document.getElementById('imageModal').classList.add('open');
+}
+</script>
+{% endblock %}

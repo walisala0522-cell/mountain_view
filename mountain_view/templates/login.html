@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}เข้าสู่ระบบ | {{ business.name }}{% endblock %}
+{% block content %}
+<div class="login-page">
+    <div class="login-box">
+        <div class="login-icon">
+            <i class="fa-solid fa-mountain-sun"></i>
+        </div>
+        <h2>เข้าสู่ระบบ</h2>
+        <p class="login-subtitle">จองห้องพัก {{ business.name }}</p>
+
+        <a href="/login/google" class="google-btn">
+            <i class="fa-brands fa-google"></i>
+            เข้าสู่ระบบด้วย Google
+        </a>
+    </div>
+</div>
+{% endblock %}

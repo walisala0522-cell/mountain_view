@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ business.name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap">
+</head>
+<body>
+  <div class="navbar">
+    <a href="{{ url_for('home') }}" class="logo">
+      <i class="fa-solid fa-mountain-sun" style="margin-right: 8px; color: var(--success-color);"></i>{{ business.name }}
+    </a>
+    <div class="nav-menu">
+      <a href="{{ url_for('home') }}" class="{{ 'active' if request.endpoint == 'home' else '' }}">หน้าแรก</a>
+      <a href="{{ url_for('rooms') }}" class="{{ 'active' if request.endpoint == 'rooms' else '' }}">ห้องพัก</a>
+      {% if session.get('user') %}
+        {% if session.get('role') == 'admin' %}
+          <a href="{{ url_for('admin') }}" class="{{ 'active' if request.endpoint in ['admin','admin_rooms'] else '' }}">แอดมิน</a>
+        {% else %}
+          <a href="{{ url_for('my_bookings') }}" class="{{ 'active' if request.endpoint == 'my_bookings' else '' }}">การจองของฉัน</a>
+          <a href="{{ url_for('profile') }}" class="{{ 'active' if request.endpoint == 'profile' else '' }}">ข้อมูลส่วนตัว</a>
+        {% endif %}
+      {% endif %}
+      <button id="themeToggle" aria-label="toggle theme" class="nav-icon-btn">
+        <i class="fa-solid fa-moon"></i>
+      </button>
+      {% if session.get('user') %}
+      <span class="nav-user">{{ session.get('username') }}</span>
+      <a href="{{ url_for('logout') }}" class="nav-link-btn" style="color: var(--error-color);">ออกจากระบบ</a>
+      {% else %}
+      <a href="{{ url_for('login') }}" class="btn primary" style="padding: 8px 16px; font-size: 0.9rem;">เข้าสู่ระบบ</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-box">
+          {% for category, m in messages %}
+          <div class="flash {{ 'flash-success' if category == 'success' else 'flash-error' }}">{{ m }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <i class="fa-solid fa-mountain-sun"></i>
+        <span>{{ business.name }}</span>
+      </div>
+      <div class="footer-info">
+        <a href="tel:{{ business.phone_tel }}"><i class="fa-solid fa-phone"></i> {{ business.phone }}</a>
+        <span><i class="fa-solid fa-location-dot"></i> {{ business.location }}</span>
+      </div>
+      <div class="footer-copy">© {{ current_year }} {{ business.name }}</div>
+    </div>
+  </footer>
+
+  <button id="scrollTopBtn" class="scroll-top-btn" aria-label="กลับขึ้นด้านบน" title="กลับขึ้นด้านบน">
+    <i class="fa-solid fa-chevron-up"></i>
+  </button>
+  <script>
+    (function(){
+      var t=localStorage.getItem('theme');
+      var btn=document.getElementById('themeToggle');
+      if(t==='dark'){
+        document.documentElement.classList.add('dark');
+        if(btn){btn.innerHTML='<i class="fa-solid fa-sun"></i>';}
+      }else{
+        if(btn){btn.innerHTML='<i class="fa-solid fa-moon"></i>';}
+      }
+    })();
+    document.getElementById('themeToggle')?.addEventListener('click',function(){
+      var el=document.documentElement;
+      var isDark=el.classList.toggle('dark');
+      localStorage.setItem('theme',isDark?'dark':'light');
+      this.innerHTML=isDark?'<i class="fa-solid fa-sun"></i>':'<i class="fa-solid fa-moon"></i>';
+    });
+    var scrollBtn=document.getElementById('scrollTopBtn');
+    window.addEventListener('scroll',function(){
+      scrollBtn?.classList.toggle('visible',window.scrollY>300);
+    });
+    scrollBtn?.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}หน้าแรก | {{ business.name }}{% endblock %}
+
+{% block content %}
+<style>
+/* Luxury green overrides for homepage */
+.luxury-home {
+    --accent-color: #065f46; /* deep emerald */
+    --accent-hover: #0b6b49;
+    --surface-color: #fbfdf9; /* warm ivory */
+    --border-color: rgba(6,95,70,0.08);
+    --shadow-lg: 0 20px 40px rgba(6,95,70,0.12);
+}
+.luxury-hero-decor { opacity: 0.14; filter: blur(1px); }
+.luxury-cta { background: linear-gradient(90deg, rgba(6,95,70,1) 0%, rgba(16,185,129,1) 100%); color: #fff; box-shadow: 0 10px 30px rgba(6,95,70,0.18); }
+.luxury-hero-badge { background: rgba(255,255,255,0.06); padding: 0.35rem 0.9rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); }
+</style>
+
+<div class="luxury-home">
+<section class="hero">
+    <div class="hero-content luxury-home">
+        <span class="hero-tag">🏔️ {{ business.location }}</span>
+        <h1 class="hero-title">พักผ่อนท่ามกลาง<br><span class="hero-highlight">ธรรมชาติ</span></h1>
+        <p class="hero-desc">สัมผัสบรรยากาศเงียบสงบ รายล้อมด้วยภูเขาและต้นไม้<br>ที่พักสุดสบายสำหรับคนรักธรรมชาติ</p>
+
+        <div class="hero-buttons">
+            <a href="{{ url_for('rooms') }}" class="btn primary btn-hero luxury-cta">
+                <i class="fa-solid fa-bed"></i>
+                <span>ดูห้องพัก</span>
+            </a>
+            {% if not session.get("user") %}
+            <a href="{{ url_for('login') }}" class="btn secondary btn-hero" style="border-color: rgba(255,255,255,0.18);">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                <span>เข้าสู่ระบบ</span>
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="room-summary">
+            <div class="summary-card">
+                <i class="fa-solid fa-door-open summary-icon"></i>
+                <span class="summary-value">{{ total_rooms }}</span>
+                <span class="summary-label">ห้องพัก</span>
+            </div>
+            <div class="summary-card summary-available">
+                <i class="fa-solid fa-sun summary-icon"></i>
+                <span class="summary-value">{{ available_rooms }}</span>
+                <span class="summary-label">ว่างตอนนี้</span>
+            </div>
+        </div>
+
+        <a href="#features" class="hero-scroll" aria-label="เลื่อนลง">
+            <i class="fa-solid fa-chevron-down"></i>
+        </a>
+    </div>
+</section>
+
+<section id="features" class="home-features">
+    <h2 class="features-title">ทำไมต้อง {{ business.name }}</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fa-solid fa-mountain-sun"></i></div>
+            <h3>วิวสวย</h3>
+            <p>ชมวิวภูเขาและธรรมชาติรายล้อม</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fa-solid fa-leaf"></i></div>
+            <h3>เงียบสงบ</h3>
+            <p>บรรยากาศผ่อนคลายเหมาะกับการพักผ่อน</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
+            <h3>จองง่าย</h3>
+            <p>จองออนไลน์ ยืนยันทันที ไม่ต้องโอนก่อน</p>
+        </div>
+    </div>
+
+    <div class="home-cta">
+        <p>พร้อมเริ่มต้นการพักผ่อนแล้วหรือยัง?</p>
+        <a href="{{ url_for('rooms') }}" class="btn primary luxury-cta">
+            <i class="fa-solid fa-calendar-check"></i>
+            จองห้องพักเลย
+        </a>
+    </div>
+</section>
+
+</div>
+{% endblock %}

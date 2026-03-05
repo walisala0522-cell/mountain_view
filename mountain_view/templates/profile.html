@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}ข้อมูลส่วนตัว | {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 600px;">
+    <div class="card">
+        <h2 style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+            <i class="fa-solid fa-user-gear" style="margin-right: 10px; color: var(--accent-color);"></i> ข้อมูลส่วนตัว
+        </h2>
+
+        <form method="POST">
+            <div class="form-group">
+                <label>อีเมล (Google ID)</label>
+                <input type="text" value="{{ user.email }}" disabled style="background-color: var(--bg-color); cursor: not-allowed; opacity: 0.7;">
+                <small style="color: var(--text-secondary);">* ไม่สามารถเปลี่ยนอีเมลได้</small>
+            </div>
+
+            <div class="form-group">
+                <label for="name">ชื่อ-นามสกุล</label>
+                <input type="text" name="name" id="name" value="{{ user.name }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">เบอร์โทรศัพท์</label>
+                <input type="tel" name="phone" id="phone" value="{{ user.phone or '' }}" placeholder="{{ business.phone_tel }}" pattern="[0-9]{9,10}" maxlength="10">
+                <small style="color: var(--text-secondary);">* เบอร์โทรจะถูกนำไปกรอกอัตโนมัติเมื่อจองห้องพัก</small>
+            </div>
+
+            <button type="submit" class="btn primary" style="width: 100%; margin-top: 1rem;">
+                <i class="fa-solid fa-save"></i> บันทึกข้อมูล
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

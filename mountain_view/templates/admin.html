@@ -1,0 +1,766 @@
+{% extends "admin_base.html" %}
+{% block title %}ภาพรวม | {{ business.name }} Admin{% endblock %}
+
+{% block admin_content %}
+<nav class="admin-breadcrumb">
+    <a href="{{ url_for('admin') }}">แอดมิน</a>
+    <span>/</span>
+    <span>ภาพรวม</span>
+</nav>
+<header class="admin-page-header">
+    <h1>ภาพรวม</h1>
+    <p class="admin-page-subtitle">สรุปการจองและรายได้ล่าสุด</p>
+</header>
+
+<section class="admin-stats">
+    <div class="stat-card">
+        <div class="stat-card-icon stat-icon-default">
+            <i class="fa-solid fa-calendar-check"></i>
+        </div>
+        <div class="stat-card-body">
+            <span class="stat-value">{{ total_bookings or 0 }}</span>
+            <span class="stat-label">จองทั้งหมด</span>
+        </div>
+    </div>
+    <div class="stat-card stat-card-success">
+        <div class="stat-card-icon stat-icon-success">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="stat-card-body">
+            <span class="stat-value">{{ paid_count or 0 }}</span>
+            <span class="stat-label">ชำระแล้ว</span>
+        </div>
+    </div>
+    <div class="stat-card stat-card-warning">
+        <div class="stat-card-icon stat-icon-warning">
+            <i class="fa-solid fa-image"></i>
+        </div>
+        <div class="stat-card-body">
+            <span class="stat-value">{{ pending_verify_count or 0 }}</span>
+            <span class="stat-label">รอตรวจสอบสลิป</span>
+        </div>
+    </div>
+    <div class="stat-card stat-card-cash">
+        <div class="stat-card-icon stat-icon-cash">
+            <i class="fa-solid fa-money-bill-wave"></i>
+        </div>
+        <div class="stat-card-body">
+            <span class="stat-value">{{ waiting_cash_count or 0 }}</span>
+            <span class="stat-label">รอรับเงินสด</span>
+        </div>
+    </div>
+    <div class="stat-card stat-card-revenue">
+        <div class="stat-card-icon stat-icon-revenue">
+            <i class="fa-solid fa-baht-sign"></i>
+        </div>
+        <div class="stat-card-body">
+            <span class="stat-value">{{ "{:,.0f}".format(total_revenue or 0) }}</span>
+            <span class="stat-label">รายได้รวม (บาท)</span>
+        </div>
+    </div>
+</section>
+<section class="admin-stats admin-stats-rooms">
+    <div class="stat-card">
+        <div class="stat-card-icon stat-icon-default">
+            <i class="fa-solid fa-door-open"></i>
+        </div>
+        <div class="stat-card-body">
+            <span class="stat-value">{{ total_rooms or 0 }}</span>
+            <span class="stat-label">ห้องที่เปิดใช้งาน</span>
+        </div>
+    </div>
+    <div class="stat-card stat-card-success">
+        <div class="stat-card-icon stat-icon-success">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="stat-card-body">
+            <span class="stat-value">{{ available_rooms_now or 0 }}</span>
+            <span class="stat-label">ห้องว่างวันนี้</span>
+        </div>
+    </div>
+    <div class="stat-card stat-card-warning">
+        <div class="stat-card-icon stat-icon-warning">
+            <i class="fa-solid fa-person-shelter"></i>
+        </div>
+        <div class="stat-card-body">
+            <span class="stat-value">{{ occupied_rooms_now or 0 }}</span>
+            <span class="stat-label">ห้องที่มีผู้เข้าพัก</span>
+        </div>
+    </div>
+</section>
+{% if (pending_count or 0) > 0 %}
+<p class="admin-pending-hint"><i class="fa-solid fa-hourglass-half"></i> รอชำระเงิน {{ pending_count }} รายการ</p>
+{% endif %}
+
+<div class="admin-card admin-card-chart">
+    <div class="chart-card-header">
+        <div class="chart-card-title">
+            <div class="chart-card-icon"><i class="fa-solid fa-chart-area"></i></div>
+            <div>
+                <h3>📊 ภาพรวม 7 วันล่าสุด</h3>
+                <p class="chart-card-subtitle">จำนวนคนเข้าพัก + รายได้รายวัน</p>
+            </div>
+        </div>
+    </div>
+    <div class="chart-wrap" style="position: relative; height: 350px;">
+        <canvas id="dashboardChart"></canvas>
+    </div>
+    <div class="chart-stats-grid">
+        <div class="chart-stat-item">
+            <div class="chart-stat-label">รวมคนเข้าพัก 7 วัน</div>
+            <div class="chart-stat-value" id="totalBookingsCount">0</div>
+        </div>
+        <div class="chart-stat-item">
+            <div class="chart-stat-label">รวมรายได้ 7 วัน</div>
+            <div class="chart-stat-value" id="totalRevenueAmount">฿0</div>
+        </div>
+        <div class="chart-stat-item">
+            <div class="chart-stat-label">เฉลี่ยคนต่อวัน</div>
+            <div class="chart-stat-value" id="avgBookingsPerDay">0</div>
+        </div>
+        <div class="chart-stat-item">
+            <div class="chart-stat-label">เฉลี่ยรายได้/วัน</div>
+            <div class="chart-stat-value" id="avgRevenuePerDay">฿0</div>
+        </div>
+    </div>
+</div>
+
+{% set staying_bookings = bookings | selectattr('is_staying') | list %}
+{% set other_bookings = bookings | rejectattr('is_staying') | list %}
+
+<div class="admin-card admin-card-bookings">
+    <div class="admin-card-header admin-card-header-row">
+        <h3>รายการจอง</h3>
+        <span class="admin-card-meta">{{ staying_bookings|length }} กำลังเข้าพัก · {{ other_bookings|length }} รายการอื่น</span>
+    </div>
+    {% if bookings %}
+
+    {% if staying_bookings %}
+    <div class="admin-bookings-section">
+        <h4 class="admin-section-title"><i class="fa-solid fa-person-shelter"></i> กำลังเข้าพัก ({{ staying_bookings|length }})</h4>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ลูกค้า</th>
+                        <th>ห้อง</th>
+                        <th>เข้าพัก</th>
+                        <th>คืน/คน/ห้อง</th>
+                        <th>ยอด</th>
+                        <th>วิธีชำระ</th>
+                        <th>สถานะ</th>
+                        <th>วันที่จอง</th>
+                        <th class="th-actions">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for b in staying_bookings %}
+                <tr>
+                    <td>
+                        <div class="cell-primary">{{ b.customer }}</div>
+                        <div class="cell-secondary"><a href="tel:{{ b.phone }}">{{ b.phone }}</a></div>
+                    </td>
+                    <td>{{ b.room }}</td>
+                    <td>
+                        <div class="cell-primary">{{ b.checkin }}</div>
+                        <div class="cell-secondary">ถึง {{ b.checkout }}</div>
+                    </td>
+                    <td>
+                        <div class="cell-detail">{{ b.nights }} คืน</div>
+                        <div class="cell-secondary">{{ b.guests }} คน · {{ b.rooms }} ห้อง</div>
+                    </td>
+                    <td class="cell-price">฿{{ "{:,.0f}".format(b.price or 0) }}</td>
+                    <td>
+                        <span class="badge badge-method badge-{{ b.payment_method or 'none' }}">{{ b.payment_label }}</span>
+                    </td>
+                    <td>
+                        <div class="cell-badges">
+                            {% if b.is_staying %}
+                            <span class="badge badge-staying">อยู่ระหว่างเข้าพัก</span>
+                            <div class="cell-secondary" style="margin-top:2px;">ออก {{ b.checkout_full }}</div>
+                            {% elif b.status == 'ชำระเงินแล้ว' %}
+                            <span class="badge badge-paid">ชำระแล้ว</span>
+                            {% if b.paid_at != '-' %}
+                            <div class="cell-secondary" style="margin-top:2px;">{{ b.paid_at }}</div>
+                            {% endif %}
+                            {% elif b.status == 'รอตรวจสอบสลิป' %}
+                            <span class="badge badge-verify">รอตรวจสอบ</span>
+                            {% if b.slip_image %}
+                            <a href="#" class="btn-slip btn-slip-open" data-slip-url="{{ url_for('static', filename='slips/' + b.slip_image) }}" title="ดูสลิป"><i class="fa-solid fa-image"></i></a>
+                            {% endif %}
+                            {% elif b.status in ['รอรับเงินสด','รอชำระเงินสด'] %}
+                            <span class="badge badge-cash">รอเงินสด</span>
+                            <div class="cell-cash-amount">฿{{ "{:,.0f}".format(b.price or 0) }}</div>
+                            {% else %}
+                            <span class="badge badge-error">รอชำระ</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-secondary">{{ b.created_at }}</div>
+                    </td>
+                    <td class="cell-actions">
+                        {% if b.status == 'รอตรวจสอบสลิป' %}
+                        <a href="{{ url_for('confirm_qr_payment', id=b.id) }}" class="btn btn-sm btn-primary" title="ยืนยันการโอน"><i class="fa-solid fa-check"></i> ยืนยัน</a>
+                        {% elif b.status == 'ชำระเงินแล้ว' or b.is_staying %}
+                        <div class="btn-group">
+                            <a href="{{ url_for('booking_detail', booking_id=b.id) }}" class="btn btn-sm btn-info" title="ดูรายละเอียด"><i class="fa-solid fa-eye"></i></a>
+                            <button type="button" class="btn btn-sm btn-success btn-checkout-now" 
+                                    data-url="{{ url_for('checkout_now', booking_id=b.id) }}"
+                                    title="ลูกค้าออกแล้ว — เช็คเอาท์ทันที"><i class="fa-solid fa-door-open"></i> เช็คเอาท์</button>
+                            <button type="button" class="btn btn-sm btn-outline btn-edit-checkout" 
+                                    data-id="{{ b.id }}" 
+                                    data-checkout="{{ (b.actual_checkout or b.checkout) }}"
+                                    data-time="{{ b.checkout_time or '12:00' }}"
+                                    data-action-url="{{ url_for('update_checkout', booking_id=b.id) }}"
+                                    title="แก้ไขวัน/เวลาเช็คเอาท์"><i class="fa-solid fa-clock"></i> แก้ไข</button>
+                        </div>
+                        {% elif b.status in ['รอชำระเงินสด','รอรับเงินสด'] %}
+                        <div class="btn-group">
+                            <a href="{{ url_for('booking_detail', booking_id=b.id) }}" class="btn btn-sm btn-info" title="ดูรายละเอียด"><i class="fa-solid fa-eye"></i></a>
+                            <button type="button" class="btn btn-sm btn-success btn-receive-cash" 
+                                    data-id="{{ b.id }}" 
+                                    data-customer="{{ b.customer }}"
+                                    data-room="{{ b.room }}"
+                                    data-checkin="{{ b.checkin }}"
+                                    data-price="{{ b.price or 0 }}"
+                                    title="รับเงินสด"><i class="fa-solid fa-money-bill-wave"></i> รับเงินสด</button>
+                        </div>
+                        {% else %}
+                        <a href="{{ url_for('booking_detail', booking_id=b.id) }}" class="btn btn-sm btn-info" title="ดูรายละเอียด"><i class="fa-solid fa-eye"></i></a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if other_bookings %}
+    <div class="admin-bookings-section">
+        <h4 class="admin-section-title"><i class="fa-solid fa-list"></i> รายการจองอื่น ({{ other_bookings|length }})</h4>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ลูกค้า</th>
+                        <th>ห้อง</th>
+                        <th>เข้าพัก</th>
+                        <th>คืน/คน/ห้อง</th>
+                        <th>ยอด</th>
+                        <th>วิธีชำระ</th>
+                        <th>สถานะ</th>
+                        <th>วันที่จอง</th>
+                        <th class="th-actions">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for b in other_bookings %}
+                <tr>
+                    <td>
+                        <div class="cell-primary">{{ b.customer }}</div>
+                        <div class="cell-secondary"><a href="tel:{{ b.phone }}">{{ b.phone }}</a></div>
+                    </td>
+                    <td>{{ b.room }}</td>
+                    <td>
+                        <div class="cell-primary">{{ b.checkin }}</div>
+                        <div class="cell-secondary">ถึง {{ b.checkout }}</div>
+                    </td>
+                    <td>
+                        <div class="cell-detail">{{ b.nights }} คืน</div>
+                        <div class="cell-secondary">{{ b.guests }} คน · {{ b.rooms }} ห้อง</div>
+                    </td>
+                    <td class="cell-price">฿{{ "{:,.0f}".format(b.price or 0) }}</td>
+                    <td>
+                        <span class="badge badge-method badge-{{ b.payment_method or 'none' }}">{{ b.payment_label }}</span>
+                    </td>
+                    <td>
+                        <div class="cell-badges">
+                            {% if b.status == 'เช็คเอาท์แล้ว' %}
+                            <span class="badge badge-checkedout">เช็คเอาท์แล้ว</span>
+                            <div class="cell-secondary" style="margin-top:2px;">{{ b.checkout_full }}</div>
+                            {% elif b.status == 'ชำระเงินแล้ว' %}
+                            <span class="badge badge-paid">ชำระแล้ว</span>
+                            {% if b.paid_at != '-' %}
+                            <div class="cell-secondary" style="margin-top:2px;">{{ b.paid_at }}</div>
+                            {% endif %}
+                            {% elif b.status == 'รอตรวจสอบสลิป' %}
+                            <span class="badge badge-verify">รอตรวจสอบ</span>
+                            {% if b.slip_image %}
+                            <a href="#" class="btn-slip btn-slip-open" data-slip-url="{{ url_for('static', filename='slips/' + b.slip_image) }}" title="ดูสลิป"><i class="fa-solid fa-image"></i></a>
+                            {% endif %}
+                            {% elif b.status in ['รอรับเงินสด','รอชำระเงินสด'] %}
+                            <span class="badge badge-cash">รอเงินสด</span>
+                            <div class="cell-cash-amount">฿{{ "{:,.0f}".format(b.price or 0) }}</div>
+                            {% else %}
+                            <span class="badge badge-error">รอชำระ</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-secondary">{{ b.created_at }}</div>
+                    </td>
+                    <td class="cell-actions">
+                        {% if b.status == 'รอตรวจสอบสลิป' %}
+                        <a href="{{ url_for('confirm_qr_payment', id=b.id) }}" class="btn btn-sm btn-primary" title="ยืนยันการโอน"><i class="fa-solid fa-check"></i> ยืนยัน</a>
+                        {% elif b.status == 'เช็คเอาท์แล้ว' %}
+                        <a href="{{ url_for('booking_detail', booking_id=b.id) }}" class="btn btn-sm btn-info" title="ดูรายละเอียด"><i class="fa-solid fa-eye"></i></a>
+                        {% elif b.status == 'ชำระเงินแล้ว' %}
+                        <div class="btn-group">
+                            <a href="{{ url_for('booking_detail', booking_id=b.id) }}" class="btn btn-sm btn-info" title="ดูรายละเอียด"><i class="fa-solid fa-eye"></i></a>
+                            <button type="button" class="btn btn-sm btn-success btn-checkout-now" 
+                                    data-url="{{ url_for('checkout_now', booking_id=b.id) }}"
+                                    title="ลูกค้าออกแล้ว — เช็คเอาท์ทันที"><i class="fa-solid fa-door-open"></i> เช็คเอาท์</button>
+                            <button type="button" class="btn btn-sm btn-outline btn-edit-checkout" 
+                                    data-id="{{ b.id }}" 
+                                    data-checkout="{{ (b.actual_checkout or b.checkout) }}"
+                                    data-time="{{ b.checkout_time or '12:00' }}"
+                                    data-action-url="{{ url_for('update_checkout', booking_id=b.id) }}"
+                                    title="แก้ไขวัน/เวลาเช็คเอาท์"><i class="fa-solid fa-clock"></i> แก้ไข</button>
+                        </div>
+                        {% elif b.status in ['รอชำระเงินสด','รอรับเงินสด'] %}
+                        <div class="btn-group">
+                            <a href="{{ url_for('booking_detail', booking_id=b.id) }}" class="btn btn-sm btn-info" title="ดูรายละเอียด"><i class="fa-solid fa-eye"></i></a>
+                            <button type="button" class="btn btn-sm btn-success btn-receive-cash" 
+                                    data-id="{{ b.id }}" 
+                                    data-customer="{{ b.customer }}"
+                                    data-room="{{ b.room }}"
+                                    data-checkin="{{ b.checkin }}"
+                                    data-price="{{ b.price or 0 }}"
+                                    title="รับเงินสด"><i class="fa-solid fa-money-bill-wave"></i> รับเงินสด</button>
+                        </div>
+                        {% else %}
+                        <a href="{{ url_for('booking_detail', booking_id=b.id) }}" class="btn btn-sm btn-info" title="ดูรายละเอียด"><i class="fa-solid fa-eye"></i></a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="admin-empty">
+        <i class="fa-solid fa-inbox"></i>
+        <p>ยังไม่มีการจองในระบบ</p>
+    </div>
+    {% endif %}
+</div>
+
+<div id="cashReceiveModal" class="modal-overlay" onclick="if(event.target===this) closeCashModal()">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-md cash-receive-modal">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-money-bill-wave"></i> รับเงินสด — ชุดคิดเงิน</h3>
+            <button type="button" class="modal-close-inner" onclick="closeCashModal()" aria-label="ปิด"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <div class="cash-receive-body">
+            <div class="cash-receive-summary">
+                <div class="cash-summary-row"><span>ลูกค้า</span><strong id="cashModalCustomer"></strong></div>
+                <div class="cash-summary-row"><span>ห้อง</span><strong id="cashModalRoom"></strong></div>
+                <div class="cash-summary-row"><span>วันที่เข้าพัก</span><strong id="cashModalCheckin"></strong></div>
+            </div>
+            <div class="cash-amount-box-admin">
+                <div class="cash-amount-label">จำนวนที่ต้องรับ</div>
+                <div class="cash-amount-value" id="cashModalAmount">฿0</div>
+                <div class="cash-amount-baht">บาท</div>
+            </div>
+            <div class="cash-calculator-box">
+                <div class="cash-calc-label"><i class="fa-solid fa-calculator"></i> คิดเงินทอน</div>
+                <div class="cash-calc-row">
+                    <label>ลูกค้าให้มา (บาท)</label>
+                    <input type="number" id="cashGivenInput" placeholder="เช่น 3000" min="0" step="1" class="cash-calc-input">
+                </div>
+                <div class="cash-calc-result" id="cashChangeResult">
+                    <span class="cash-calc-result-label">เงินทอน</span>
+                    <span class="cash-calc-result-value" id="cashChangeValue">฿0</span>
+                </div>
+            </div>
+            <form id="cashConfirmForm" method="GET" style="margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-check"></i> ยืนยันรับเงินสดแล้ว</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="checkoutModal" class="modal-overlay" onclick="if(event.target===this) closeCheckoutModal()">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-clock"></i> แก้ไขวัน/เวลาเช็คเอาท์</h3>
+            <button type="button" class="modal-close-inner" onclick="closeCheckoutModal()" aria-label="ปิด"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <form id="checkoutForm" method="POST">
+            <div class="form-group">
+                <label>วันที่ออก (วันเช็คเอาท์)</label>
+                <input type="date" name="actual_checkout_date" id="checkoutDateInput">
+            </div>
+            <div class="form-group">
+                <label>เวลาออก (เช่น 11:00, 12:00)</label>
+                <input type="text" name="checkout_time" id="checkoutTimeInput" placeholder="12:00" maxlength="5">
+                <small style="color: var(--text-secondary);">รูปแบบ HH:MM เช่น 11:00</small>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeCheckoutModal()">ยกเลิก</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> บันทึก</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="slipModal" class="modal-overlay" onclick="if(event.target===this) closeSlipModal()">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-image">
+        <button type="button" onclick="closeSlipModal()" class="modal-close" aria-label="ปิด"><i class="fa-solid fa-times"></i></button>
+        <img id="modalSlipImage" src="" alt="สลิปการโอน">
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Dashboard Chart - Bookings & Revenue
+(function() {
+    var dashboardData = {{ dashboard_data | tojson }};
+    
+    if (!dashboardData || dashboardData.length === 0) {
+        console.warn('[CHART] Dashboard data is empty');
+        return;
+    }
+    
+    var labels = dashboardData.map(d => d.date_display);
+    var revenueValues = dashboardData.map(d => d.revenue || 0);
+    var bookingsValues = dashboardData.map(d => d.bookings || 0);
+    
+    // Calculate totals and averages
+    var totalRevenue = revenueValues.reduce((a, b) => a + b, 0);
+    var totalBookings = bookingsValues.reduce((a, b) => a + b, 0);
+    var avgRevenue = totalRevenue / revenueValues.length;
+    var avgBookings = totalBookings / bookingsValues.length;
+    
+    // Update stat boxes
+    document.getElementById('totalBookingsCount').textContent = totalBookings;
+    document.getElementById('totalRevenueAmount').textContent = '฿' + totalRevenue.toLocaleString('th-TH', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    document.getElementById('avgBookingsPerDay').textContent = avgBookings.toFixed(1);
+    document.getElementById('avgRevenuePerDay').textContent = '฿' + avgRevenue.toLocaleString('th-TH', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    
+    var isDark = document.documentElement.classList.contains('dark');
+    var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    var textColor = isDark ? '#94a3b8' : '#64748b';
+    
+    var ctx = document.getElementById('dashboardChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'รายได้ (บาท)',
+                    data: revenueValues,
+                    backgroundColor: 'rgba(14, 165, 233, 0.7)',
+                    borderColor: 'rgba(14, 165, 233, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    yAxisID: 'y',
+                    order: 2
+                },
+                {
+                    label: 'จำนวนคนเข้าพัก',
+                    data: bookingsValues,
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    borderWidth: 2.5,
+                    type: 'line',
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y1',
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: textColor,
+                        font: { size: 12, weight: 'bold' },
+                        padding: 15,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    backgroundColor: isDark ? '#1e293b' : '#fff',
+                    titleColor: textColor,
+                    bodyColor: textColor,
+                    borderColor: isDark ? '#475569' : '#e2e8f0',
+                    borderWidth: 1,
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.datasetIndex === 0) {
+                                return ctx.dataset.label + ': ฿' + (ctx.raw || 0).toLocaleString('th-TH');
+                            } else {
+                                return ctx.dataset.label + ': ' + (ctx.raw || 0) + ' คน';
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    title: { display: true, text: 'รายได้ (บาท)', color: textColor },
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    grid: { color: gridColor, drawBorder: false },
+                    ticks: { color: textColor, font: { size: 11 }, padding: 8, callback: function(v) { return '฿' + v.toLocaleString('th-TH'); } },
+                    max: Math.max(...revenueValues) * 1.1
+                },
+                y1: {
+                    title: { display: true, text: 'จำนวนคน', color: textColor },
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { display: false },
+                    ticks: { color: textColor, font: { size: 11 }, padding: 8 },
+                    max: Math.max(...bookingsValues) * 1.3
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: textColor, font: { size: 11 }, padding: 10 }
+                }
+            }
+        }
+    });
+})();
+</script>
+
+<style>
+.badge.badge-staying {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.badge.badge-checkedout {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+.chart-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.chart-stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 0.5rem;
+    border-left: 3px solid var(--primary);
+}
+
+.chart-stat-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.chart-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+@media (max-width: 768px) {
+    .chart-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ---------------- slip modal ---------------- */
+
+    document.querySelectorAll('.btn-slip-open').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            openSlipModal(this.dataset.slipUrl);
+        });
+    });
+
+    /* ---------------- receive cash ---------------- */
+
+    document.querySelectorAll('.btn-receive-cash').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            openCashModal(
+                this.dataset.id,
+                this.dataset.customer,
+                this.dataset.room,
+                this.dataset.checkin,
+                this.dataset.price
+            );
+        });
+    });
+
+    var cashInput = document.getElementById('cashGivenInput');
+    if (cashInput) {
+        cashInput.addEventListener('input', updateCashChange);
+    }
+
+    /* ---------------- edit checkout ---------------- */
+
+    document.querySelectorAll('.btn-edit-checkout').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            openCheckoutModal(
+                this.dataset.id,
+                this.dataset.checkout,
+                this.dataset.time,
+                this.dataset.actionUrl
+            );
+        });
+    });
+
+    /* ---------------- checkout now ---------------- */
+
+    document.querySelectorAll('.btn-checkout-now').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (confirm('ยืนยันเช็คเอาท์ลูกค้า?')) {
+                window.location.href = this.dataset.url;
+            }
+        });
+    });
+
+});
+
+
+/* ================= slip ================= */
+
+function openSlipModal(src) {
+    document.getElementById('modalSlipImage').src = src;
+    document.getElementById('slipModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeSlipModal() {
+    document.getElementById('slipModal').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+
+/* ================= cash ================= */
+
+function openCashModal(id, customer, room, checkin, price) {
+
+    document.getElementById('cashModalCustomer').textContent = customer || '-';
+    document.getElementById('cashModalRoom').textContent = room || '-';
+    document.getElementById('cashModalCheckin').textContent = checkin || '-';
+
+    var p = parseFloat(price) || 0;
+
+    document.getElementById('cashModalAmount').textContent =
+        '฿' + p.toLocaleString('th-TH');
+
+    document.getElementById('cashConfirmForm').action =
+        '/confirm_cash_payment/' + id;
+
+    var input = document.getElementById('cashGivenInput');
+    input.value = '';
+    input.dataset.required = p;
+
+    document.getElementById('cashChangeValue').textContent = '฿0';
+    document.getElementById('cashChangeResult').className = 'cash-calc-result';
+
+    document.getElementById('cashReceiveModal').classList.add('open');
+}
+
+function closeCashModal() {
+    document.getElementById('cashReceiveModal').classList.remove('open');
+}
+
+function updateCashChange() {
+
+    var input = document.getElementById('cashGivenInput');
+
+    if (!input) return;
+
+    var required = parseFloat(input.dataset.required) || 0;
+    var given = parseFloat(input.value) || 0;
+
+    var change = given - required;
+
+    var el = document.getElementById('cashChangeValue');
+    var box = document.getElementById('cashChangeResult');
+
+    box.classList.remove('cash-calc-ok', 'cash-calc-insufficient');
+
+    if (!input.value) {
+
+        el.textContent = 'กรอกจำนวนที่ลูกค้าให้';
+
+    } else if (change < 0) {
+
+        el.textContent =
+            'เงินไม่พอ — ขาด ฿' + Math.abs(change).toLocaleString('th-TH');
+
+        box.classList.add('cash-calc-insufficient');
+
+    } else if (change > 0) {
+
+        el.textContent =
+            'ทอน ฿' + change.toLocaleString('th-TH');
+
+        box.classList.add('cash-calc-ok');
+
+    } else {
+
+        el.textContent = '฿0 (พอดี)';
+        box.classList.add('cash-calc-ok');
+    }
+}
+
+
+/* ================= checkout edit ================= */
+
+function openCheckoutModal(id, checkout, time, actionUrl) {
+
+    var form = document.getElementById('checkoutForm');
+
+    form.action = actionUrl;
+
+    var dateStr = (checkout || '').toString().slice(0, 10);
+
+    document.getElementById('checkoutDateInput').value = dateStr;
+    document.getElementById('checkoutTimeInput').value = time || '12:00';
+
+    document.getElementById('checkoutModal').classList.add('open');
+}
+
+function closeCheckoutModal() {
+    document.getElementById('checkoutModal').classList.remove('open');
+}
+
+</script>
+{% endblock %}

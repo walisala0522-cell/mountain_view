@@ -1,0 +1,334 @@
+{% extends "admin_base.html" %}
+{% block title %}รายละเอียดการจอง #{{ booking.id }} | Admin{% endblock %}
+
+{% block admin_content %}
+<nav class="admin-breadcrumb">
+    <a href="{{ url_for('admin') }}">แอดมิน</a>
+    <span>/</span>
+    <a href="{{ url_for('admin') }}#bookings">การจอง</a>
+    <span>/</span>
+    <span>#{{ booking.id }}</span>
+</nav>
+
+<header class="admin-page-header">
+    <div class="admin-header-row">
+        <div>
+            <h1><i class="fa-solid fa-receipt"></i> รายละเอียดการจอง #{{ booking.id }}</h1>
+            <p class="admin-page-subtitle">{{ booking.checkin_display }} - {{ booking.checkout_display }} ({{ booking.nights }} คืน)</p>
+        </div>
+        <div class="admin-header-actions">
+            {% if booking.is_staying %}
+            <span class="badge badge-staying" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                <i class="fa-solid fa-person-shelter"></i> อยู่ระหว่างเข้าพัก
+            </span>
+            {% else %}
+            <span class="badge badge-{{ booking.status|lower|replace(' ', '-')|replace('ั', '')|replace('ี', '') }}" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                {{ booking.status }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<div class="admin-container admin-booking-detail">
+    <!-- Left Column: Customer & Booking Info -->
+    <div class="booking-info-grid">
+        <!-- Card 1: ข้อมูลลูกค้า -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h3><i class="fa-solid fa-user"></i> ข้อมูลลูกค้า</h3>
+            </div>
+            <div class="admin-card-body booking-info-section">
+                <div class="booking-info-row">
+                    <label>ชื่อ-นามสกุล</label>
+                    <div class="booking-info-value">{{ booking.customer }}</div>
+                </div>
+                <div class="booking-info-row">
+                    <label>เบอร์โทร</label>
+                    <div class="booking-info-value">
+                        <a href="tel:{{ booking.phone }}" class="link-action">{{ booking.phone }}</a>
+                    </div>
+                </div>
+                <div class="booking-info-row">
+                    <label>อีเมล</label>
+                    <div class="booking-info-value">{{ booking.email }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: ข้อมูลการจอง -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h3><i class="fa-solid fa-calendar-check"></i> ข้อมูลการจอง</h3>
+            </div>
+            <div class="admin-card-body booking-info-section">
+                <div class="booking-info-row">
+                    <label>ห้องพัก</label>
+                    <div class="booking-info-value">{{ booking.room }}</div>
+                </div>
+                <div class="booking-info-row">
+                    <label>หมายเลขห้อง</label>
+                    <div class="booking-info-value">{{ booking.room_id }}</div>
+                </div>
+                <div class="booking-info-row">
+                    <label>เข้าพัก</label>
+                    <div class="booking-info-value">{{ booking.checkin_display }}</div>
+                </div>
+                <div class="booking-info-row">
+                    <label>ออกจากห้อง (ตามแผน)</label>
+                    <div class="booking-info-value">{{ booking.checkout_display }}</div>
+                </div>
+                {% if booking.actual_checkout %}
+                <div class="booking-info-row">
+                    <label>ออกจากห้อง (จริง)</label>
+                    <div class="booking-info-value" style="color: var(--warning);">
+                        <i class="fa-solid fa-circle-info"></i>
+                        {{ booking.actual_checkout|string }}
+                    </div>
+                </div>
+                {% endif %}
+                <div class="booking-info-row">
+                    <label>ระยะเวลา</label>
+                    <div class="booking-info-value">{{ booking.nights }} คืน</div>
+                </div>
+                <div class="booking-info-row">
+                    <label>จำนวนผู้เข้าพัก</label>
+                    <div class="booking-info-value">{{ booking.guests }} คน / {{ booking.rooms }} ห้อง</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: ข้อมูลการชำระเงิน -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h3><i class="fa-solid fa-credit-card"></i> ข้อมูลการชำระเงิน</h3>
+            </div>
+            <div class="admin-card-body booking-info-section">
+                <div class="booking-info-row">
+                    <label>ยอดรวม</label>
+                    <div class="booking-info-value" style="font-size: 1.3rem; color: var(--success); font-weight: 600;">
+                        ฿{{ "{:,.0f}".format(booking.price) }}
+                    </div>
+                </div>
+                <div class="booking-info-row">
+                    <label>วิธีชำระ</label>
+                    <div class="booking-info-value">
+                        {% if booking.payment_method == 'qr' %}
+                            <span class="badge badge-method badge-qr"><i class="fa-solid fa-qrcode"></i> โอน/QR</span>
+                        {% elif booking.payment_method == 'cash' %}
+                            <span class="badge badge-method badge-cash"><i class="fa-solid fa-money-bill-wave"></i> เงินสด</span>
+                        {% else %}
+                            <span class="badge badge-method badge-none">-</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="booking-info-row">
+                    <label>สถานะการชำระ</label>
+                    <div class="booking-info-value">
+                        <span class="badge badge-{{ booking.status|lower|replace(' ', '-') }}">
+                            {{ booking.status }}
+                        </span>
+                    </div>
+                </div>
+                {% if booking.paid_at %}
+                <div class="booking-info-row">
+                    <label>วันที่ชำระ</label>
+                    <div class="booking-info-value">{{ booking.paid_at.strftime('%d/%m/%Y') if booking.paid_at else '-' }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Card 4: เช็คเอาท์ -->
+        {% if booking.is_staying or booking.status == 'ชำระเงินแล้ว' %}
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h3><i class="fa-solid fa-door-open"></i> เช็คเอาท์</h3>
+            </div>
+            <div class="admin-card-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <button type="button" class="btn btn-success" onclick="checkoutNow()">
+                        <i class="fa-solid fa-check"></i> เช็คเอาท์ทันที
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="openCheckoutModal()">
+                        <i class="fa-solid fa-edit"></i> แก้ไขวัน/เวลา
+                    </button>
+                </div>
+                {% if booking.actual_checkout %}
+                <div style="margin-top: 1rem; padding: 0.75rem; background: var(--success-light); border-radius: 0.5rem; color: var(--success);">
+                    <i class="fa-solid fa-check-circle"></i> เช็คเอาท์แล้ว: {{ booking.actual_checkout|string }} เวลา {{ booking.checkout_time }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal: แก้ไขเช็คเอาท์ -->
+<div id="checkoutModal" class="modal-overlay" onclick="if(event.target===this) closeCheckoutModal()">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-clock"></i> แก้ไขวัน/เวลาเช็คเอาท์</h3>
+            <button type="button" class="modal-close-inner" onclick="closeCheckoutModal()" aria-label="ปิด"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <form id="checkoutForm" method="POST" action="{{ url_for('update_checkout', booking_id=booking.id) }}">
+            <div class="form-group">
+                <label>วันที่ออก (วันเช็คเอาท์)</label>
+                <input type="date" name="actual_checkout_date" id="checkoutDateInput" value="{{ booking.actual_checkout or booking.checkout }}">
+            </div>
+            <div class="form-group">
+                <label>เวลาออก (HH:MM)</label>
+                <input type="text" name="checkout_time" id="checkoutTimeInput" placeholder="12:00" maxlength="5" value="{{ booking.checkout_time }}">
+                <small>เช่น 11:00 หรือ 14:30</small>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeCheckoutModal()">ยกเลิก</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> บันทึก</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.admin-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.booking-info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.booking-info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.booking-info-row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.booking-info-row:last-child {
+    border-bottom: none;
+}
+
+.booking-info-row label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.booking-info-value {
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.3rem 0.75rem;
+    border-radius: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.badge.badge-method {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.badge.badge-paid,
+.badge.badge-success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+}
+
+.badge.badge-staying {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.badge.badge-checkedout {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+.badge.badge-verify {
+    background: rgba(251, 146, 60, 0.1);
+    color: #fb923c;
+}
+
+.badge.badge-cash {
+    background: rgba(168, 85, 247, 0.1);
+    color: #a855f7;
+}
+
+.badge.badge-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.link-action {
+    color: var(--primary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--primary);
+}
+
+.link-action:hover {
+    text-decoration: underline;
+}
+
+.admin-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .booking-info-row {
+        grid-template-columns: 100px 1fr;
+    }
+    
+    .admin-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+
+<script>
+function openCheckoutModal() {
+    document.getElementById('checkoutModal').classList.add('open');
+}
+
+function closeCheckoutModal() {
+    document.getElementById('checkoutModal').classList.remove('open');
+}
+
+function checkoutNow() {
+    const url = '{{ url_for("checkout_now", booking_id=booking.id) }}';
+    
+    if (confirm('ยืนยันเช็คเอาท์ลูกค้า?')) {
+        window.location.href = url;
+    }
+}
+
+document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+    const time = document.getElementById('checkoutTimeInput').value;
+    if (time && !/^\d{2}:\d{2}$/.test(time)) {
+        e.preventDefault();
+        alert('เวลาต้องอยู่ในรูปแบบ HH:MM เช่น 12:00');
+    }
+});
+</script>
+{% endblock %}

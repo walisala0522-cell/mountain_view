@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}ห้องพักทั้งหมด | {{ business.name }}{% endblock %}
+
+{% block content %}
+<div style="margin-top: 2rem;">
+    <div class="page-header">
+        <h1>ห้องพักทั้งหมด</h1>
+        <p class="subtitle">เลือกห้องพักที่เหมาะกับคุณ</p>
+    </div>
+
+    {% set rooms_list = rooms or [] %}
+    {% set rooms_available = rooms_list | selectattr('status', 'equalto', 'ว่าง') | list %}
+    {% set rooms_occupied = rooms_list | rejectattr('status', 'equalto', 'ว่าง') | list %}
+
+    {% if rooms_available %}
+    <div class="rooms-section">
+        <h2 class="rooms-section-title"><i class="fa-solid fa-sun"></i> ห้องว่าง ({{ rooms_available|length }})</h2>
+        <div class="grid-rooms">
+            {% for room in rooms_available %}
+            {% set img = room.image %}
+            {% set is_available = true %}
+            {% set is_staying = false %}
+
+            <div class="room-card">
+                <div style="overflow: hidden; height: 220px; position: relative;">
+                    <span class="room-status-badge {{ 'available' if is_available else ('staying' if is_staying else 'unavailable') }}">
+                        {{ room.status }}
+                    </span>
+                    {% if 'room_images/' in img %}
+                        <img src="{{ url_for('static', filename=img) }}" class="room-img" alt="{{ room.name }}">
+                    {% else %}
+                        <img src="{{ url_for('static', filename=img) }}" class="room-img" alt="{{ room.name }}" onerror="this.src='/static/images/default.jpg'">
+                    {% endif %}
+                    
+                    <button onclick="openGallery('{{ room.room_id }}')" style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(4px);">
+                        <i class="fa-solid fa-images"></i> ดูรูปเพิ่มเติม
+                    </button>
+                </div>
+
+                <div class="room-details">
+                    <h3>{{ room.name }}</h3>
+                    
+                    <div class="room-price">
+                        ฿{{ "{:,.0f}".format(room.price or 0) }} <span style="font-size: 0.9rem; font-weight: 400; color: var(--text-secondary);">/ คืน</span>
+                    </div>
+
+                    <!-- Facilities Icons -->
+                    <div class="room-meta" style="flex-wrap: wrap; gap: 8px; margin-bottom: 1rem;">
+                        {% if room.facilities %}
+                            {% for fac in room.facilities %}
+                                <span title="{{ fac.name }}" style="background: var(--input-bg); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                    <i class="{{ fac.icon_class }}"></i> {{ fac.name }}
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            <span style="color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fa-solid fa-wifi"></i> สิ่งอำนวยความสะดวกพื้นฐาน
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div style="margin-top: auto;">
+                        {% if is_available %}
+                            <a href="{{ url_for('book', room_id=room.room_id) }}" class="btn primary" style="width: 100%;">
+                                จองห้องพักนี้
+                            </a>
+                        {% else %}
+                            <button class="btn secondary" style="width: 100%; cursor: not-allowed; opacity: 0.6; color: var(--text-secondary); border-color: var(--border-color);" disabled>
+                                {{ 'มีคนใช้งานอยู่' if is_staying else 'ไม่ว่าง' }}
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if rooms_occupied %}
+    <div class="rooms-section">
+        <h2 class="rooms-section-title"><i class="fa-solid fa-person-shelter"></i> ห้องที่มีคนจอง/ใช้งาน ({{ rooms_occupied|length }})</h2>
+        <div class="grid-rooms">
+            {% for room in rooms_occupied %}
+            {% set img = room.image %}
+            {% set is_available = false %}
+            {% set is_staying = (room.status == "มีคนใช้งานอยู่") %}
+            <div class="room-card">
+                <div style="overflow: hidden; height: 220px; position: relative;">
+                    <span class="room-status-badge {{ 'available' if is_available else ('staying' if is_staying else 'unavailable') }}">
+                        {{ room.status }}
+                    </span>
+                    {% if 'room_images/' in img %}
+                        <img src="{{ url_for('static', filename=img) }}" class="room-img" alt="{{ room.name }}">
+                    {% else %}
+                        <img src="{{ url_for('static', filename=img) }}" class="room-img" alt="{{ room.name }}" onerror="this.src='/static/images/default.jpg'">
+                    {% endif %}
+                    
+                    <button onclick="openGallery('{{ room.room_id }}')" style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(4px);">
+                        <i class="fa-solid fa-images"></i> ดูรูปเพิ่มเติม
+                    </button>
+                </div>
+
+                <div class="room-details">
+                    <h3>{{ room.name }}</h3>
+                    
+                    <div class="room-price">
+                        ฿{{ "{:,.0f}".format(room.price or 0) }} <span style="font-size: 0.9rem; font-weight: 400; color: var(--text-secondary);">/ คืน</span>
+                    </div>
+
+                    <div class="room-meta" style="flex-wrap: wrap; gap: 8px; margin-bottom: 1rem;">
+                        {% if room.facilities %}
+                            {% for fac in room.facilities %}
+                                <span title="{{ fac.name }}" style="background: var(--input-bg); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                    <i class="{{ fac.icon_class }}"></i> {{ fac.name }}
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            <span style="color: var(--text-secondary); font-size: 0.85rem;">
+                                <i class="fa-solid fa-wifi"></i> สิ่งอำนวยความสะดวกพื้นฐาน
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div style="margin-top: auto;">
+                        <button class="btn secondary" style="width: 100%; cursor: not-allowed; opacity: 0.6; color: var(--text-secondary); border-color: var(--border-color);" disabled>
+                            {{ 'มีคนใช้งานอยู่' if is_staying else 'ไม่ว่าง' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not rooms_available and not rooms_occupied %}
+    <div class="empty-state" style="grid-column: 1 / -1;">
+        <i class="fa-solid fa-bed"></i>
+        <h3>ไม่พบข้อมูลห้องพัก</h3>
+        <p>กรุณาติดต่อเจ้าหน้าที่</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Gallery Modal -->
+<div id="galleryModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; flex-direction: column;">
+    <button onclick="closeGallery()" style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer;">&times;</button>
+    
+    <div style="max-width: 800px; width: 90%; text-align: center;">
+        <img id="galleryMainImage" src="" style="max-width: 100%; max-height: 70vh; border-radius: 8px; margin-bottom: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <div id="galleryThumbnails" style="display: flex; gap: 10px; justify-content: center; overflow-x: auto; padding: 10px;">
+            <!-- Thumbnails injected via JS -->
+        </div>
+    </div>
+</div>
+
+<script>
+    async function openGallery(roomId) {
+        // Fetch images
+        try {
+            const response = await fetch(`/room_details/${roomId}`);
+            const data = await response.json();
+            
+            const modal = document.getElementById('galleryModal');
+            const mainImg = document.getElementById('galleryMainImage');
+            const thumbs = document.getElementById('galleryThumbnails');
+            
+            thumbs.innerHTML = ''; // Clear old
+            
+            if (data.images && data.images.length > 0) {
+                // Set first image
+                mainImg.src = `/static/room_images/${data.images[0]}`;
+                
+                // Create thumbnails
+                data.images.forEach(img => {
+                    const thumb = document.createElement('img');
+                    thumb.src = `/static/room_images/${img}`;
+                    thumb.style.width = '60px';
+                    thumb.style.height = '60px';
+                    thumb.style.objectFit = 'cover';
+                    thumb.style.borderRadius = '4px';
+                    thumb.style.cursor = 'pointer';
+                    thumb.style.border = '2px solid transparent';
+                    thumb.style.opacity = '0.6';
+                    thumb.style.transition = 'all 0.2s';
+                    
+                    thumb.onclick = () => {
+                        mainImg.src = `/static/room_images/${img}`;
+                        document.querySelectorAll('#galleryThumbnails img').forEach(t => {
+                            t.style.borderColor = 'transparent';
+                            t.style.opacity = '0.6';
+                        });
+                        thumb.style.borderColor = 'white';
+                        thumb.style.opacity = '1';
+                    };
+                    
+                    thumbs.appendChild(thumb);
+                });
+                
+                modal.style.display = 'flex';
+            } else {
+                alert('ยังไม่มีรูปภาพเพิ่มเติม');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('ไม่สามารถโหลดรูปภาพได้');
+        }
+    }
+
+    function closeGallery() {
+        document.getElementById('galleryModal').style.display = 'none';
+    }
+</script>
+{% endblock %}

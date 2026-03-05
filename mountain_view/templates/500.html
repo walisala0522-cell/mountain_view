@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}เกิดข้อผิดพลาด | {{ business.name }}{% endblock %}
+{% block content %}
+<div class="empty-state" style="min-height: 50vh;">
+    <i class="fa-solid fa-triangle-exclamation" style="color: var(--warning-color);"></i>
+    <h3>เกิดข้อผิดพลาดในระบบ</h3>
+    <p>กรุณาลองใหม่อีกครั้งหรือติดต่อเจ้าหน้าที่</p>
+    <a href="{{ url_for('home') }}" class="btn primary">
+        <i class="fa-solid fa-house" style="margin-right: 8px;"></i> กลับหน้าหลัก
+    </a>
+</div>
+{% endblock %}

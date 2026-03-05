@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}การจองของฉัน | {{ business.name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px;">
+    <h2 style="margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <i class="fa-solid fa-list-check" style="margin-right: 10px; color: var(--accent-color);"></i> รายการจองของฉัน
+    </h2>
+
+    {% if bookings %}
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            {% for b in bookings %}
+            <div class="card" style="display: flex; flex-direction: column; gap: 1rem;">
+                
+                <!-- Header: Room Name & Status -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h3 style="margin: 0; color: var(--accent-color);">{{ b.room_name }}</h3>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px;">
+                            <i class="fa-regular fa-clock"></i> จองเมื่อ {{ b.created_at.strftime('%d/%m/%Y %H:%M') }}
+                        </div>
+                    </div>
+                    <div>
+                        {% if b.payment_status == 'paid' or b.payment_status == 'ชำระเงินแล้ว' %}
+                            <span class="badge badge-paid"><i class="fa-solid fa-check-circle"></i> ชำระเงินแล้ว</span>
+                        {% elif b.payment_status == 'pending_verify' or b.payment_status == 'รอตรวจสอบ' %}
+                            <span class="badge badge-verify"><i class="fa-solid fa-hourglass-half"></i> รอตรวจสอบ</span>
+                        {% elif b.payment_status == 'waiting_cash' or b.payment_status == 'รอชำระเงินสด' %}
+                            <span class="badge badge-cash"><i class="fa-solid fa-money-bill"></i> รอชำระเงินสด</span>
+                        {% else %}
+                            <span class="badge badge-error"><i class="fa-solid fa-circle-exclamation"></i> รอชำระเงิน</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Details Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; background: var(--input-bg); padding: 1rem; border-radius: var(--radius-sm);">
+                    <div>
+                        <span style="display: block; font-size: 0.85rem; color: var(--text-secondary);">วันเช็คอิน</span>
+                        <span style="font-weight: 500;">{{ b.check_in }}</span>
+                    </div>
+                    <div>
+                        <span style="display: block; font-size: 0.85rem; color: var(--text-secondary);">วันเช็คเอาท์</span>
+                        <span style="font-weight: 500;">{{ b.check_out }}</span>
+                    </div>
+                    <div>
+                        <span style="display: block; font-size: 0.85rem; color: var(--text-secondary);">จำนวนห้อง</span>
+                        <span style="font-weight: 500;">{{ b.room_count }} ห้อง</span>
+                    </div>
+                    <div>
+                        <span style="display: block; font-size: 0.85rem; color: var(--text-secondary);">ราคารวม</span>
+                        <span style="font-weight: 600; color: var(--accent-color);">฿{{ "{:,.0f}".format(b.total_price or 0) }}</span>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem;">
+                    {% if b.payment_status not in ['paid', 'ชำระเงินแล้ว', 'waiting_cash', 'รอชำระเงินสด', 'pending_verify', 'รอตรวจสอบ'] %}
+                        <a href="{{ url_for('payment', booking_id=b.id) }}" class="btn primary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                            <i class="fa-solid fa-credit-card"></i> แจ้งชำระเงิน
+                        </a>
+                    {% endif %}
+                    
+                    <!-- Only show cancel if not paid -->
+                    {% if b.payment_status not in ['paid', 'ชำระเงินแล้ว'] %}
+                         <!-- Future: Cancel Logic -->
+                    {% endif %}
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="fa-solid fa-calendar-check"></i>
+            <h3>คุณยังไม่มีรายการจอง</h3>
+            <p>เริ่มต้นการพักผ่อนที่ {{ business.name }} ได้เลย</p>
+            <a href="{{ url_for('rooms') }}" class="btn primary">จองห้องพักเลย</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
