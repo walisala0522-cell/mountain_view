@@ -656,25 +656,34 @@ document.addEventListener('DOMContentLoaded', function () {
     /* --------- close modals when clicking overlay --------- */
 
     // Close slip modal
-    document.getElementById('slipModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeSlipModal();
-        }
-    });
+    var slipModal = document.getElementById('slipModal');
+    if (slipModal) {
+        slipModal.addEventListener('click', function(e) {
+            if (e.target === this || (e.target.classList && e.target.classList.contains('modal-backdrop'))) {
+                closeSlipModal();
+            }
+        });
+    }
 
     // Close cash modal
-    document.getElementById('cashReceiveModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeCashModal();
-        }
-    });
+    var cashModal = document.getElementById('cashReceiveModal');
+    if (cashModal) {
+        cashModal.addEventListener('click', function(e) {
+            if (e.target.classList && e.target.classList.contains('modal-overlay')) {
+                closeCashModal();
+            }
+        });
+    }
 
     // Close checkout modal
-    document.getElementById('checkoutModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeCheckoutModal();
-        }
-    });
+    var checkoutModal = document.getElementById('checkoutModal');
+    if (checkoutModal) {
+        checkoutModal.addEventListener('click', function(e) {
+            if (e.target.classList && e.target.classList.contains('modal-overlay')) {
+                closeCheckoutModal();
+            }
+        });
+    }
 
 });
 
