@@ -138,14 +138,14 @@ def _create_flow():
         return None
 
 def get_db_connection():
-    """Get MySQL database connection - Aiven"""
+    """Get MySQL database connection - supports Aiven and local"""
     return mysql.connector.connect(
-        host='165.22.211.157',
-        user='avnadmin',
-        password='AVNS_tX-dYgQUCUNzObsCSLt',
-        database='defaultdb',
-        port=21351,
-        ssl_disabled=False
+        host=os.environ.get('DB_HOST', 'localhost'),
+        user=os.environ.get('DB_USER', 'root'),
+        password=os.environ.get('DB_PASSWORD', ''),
+        database=os.environ.get('DB_NAME', 'mountain_view'),
+        port=int(os.environ.get('DB_PORT', 3306)),
+        ssl_disabled=False if os.environ.get('DB_PORT') == '21351' else True
     )
 
 def get_room_statistics():
