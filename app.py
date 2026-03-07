@@ -24,7 +24,9 @@ os.makedirs(app.config['ROOM_IMAGES_FOLDER'], exist_ok=True)
 os.makedirs('static/qr', exist_ok=True)
 
 ADMIN_EMAIL = "mountainview.bungalow0522@gmail.com"
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+# Only allow insecure transport for local development
+if os.environ.get('FLASK_ENV') != 'production':
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 # ข้อมูลธุรกิจ - แก้ที่นี่ทีเดียว ใช้ทั้งเว็บ
 BUSINESS_INFO = {
@@ -136,11 +138,13 @@ def _create_flow():
         return None
 
 def get_db_connection():
+    """Get MySQL database connection - supports both local and Render"""
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="mountain_view"
+        host=os.environ.get('DB_HOST', 'localhost'),
+        user=os.environ.get('DB_USER', 'root'),
+        password=os.environ.get('DB_PASSWORD', ''),
+        database=os.environ.get('DB_NAME', 'mountain_view'),
+        port=int(os.environ.get('DB_PORT', 3306))
     )
 
 def get_room_statistics():
