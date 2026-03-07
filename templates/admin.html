@@ -351,7 +351,7 @@
     {% endif %}
 </div>
 
-<div id="cashReceiveModal" class="modal-overlay" onclick="if(event.target===this) closeCashModal()">
+<div id="cashReceiveModal" class="modal-overlay">
     <div class="modal-backdrop"></div>
     <div class="modal-content modal-md cash-receive-modal">
         <div class="modal-header">
@@ -387,7 +387,7 @@
     </div>
 </div>
 
-<div id="checkoutModal" class="modal-overlay" onclick="if(event.target===this) closeCheckoutModal()">
+<div id="checkoutModal" class="modal-overlay">
     <div class="modal-backdrop"></div>
     <div class="modal-content modal-md">
         <div class="modal-header">
@@ -653,6 +653,29 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    /* --------- close modals when clicking overlay --------- */
+
+    // Close slip modal
+    document.getElementById('slipModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeSlipModal();
+        }
+    });
+
+    // Close cash modal
+    document.getElementById('cashReceiveModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeCashModal();
+        }
+    });
+
+    // Close checkout modal
+    document.getElementById('checkoutModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeCheckoutModal();
+        }
+    });
+
 });
 
 
@@ -668,13 +691,6 @@ function closeSlipModal() {
     document.getElementById('slipModal').classList.remove('open');
     document.body.style.overflow = '';
 }
-
-// Close modal when clicking overlay background
-document.getElementById('slipModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeSlipModal();
-    }
-});
 
 
 /* ================= cash ================= */
