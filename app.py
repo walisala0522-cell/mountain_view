@@ -7,6 +7,8 @@ import mysql.connector
 from functools import wraps
 from datetime import datetime, date, timedelta
 from werkzeug.utils import secure_filename
+import json
+import tempfile
 
 import qrcode
 
@@ -87,18 +89,41 @@ OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/userinfo.email",
     "openid"
 ]
-OAUTH_REDIRECT_URI = "http://127.0.0.1:5000/callback"
 
 # Store Flow per OAuth session (state) - กัน code_verifier หายเมื่อ callback
 _oauth_flows = {}
 
+def _get_oauth_redirect_uri():
+    """Get OAuth redirect URI - dynamic for different environments"""
+    if os.environ.get('FLASK_ENV') == 'production':
+        # For Render: use the actual domain
+        return f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'localhost:5000')}/callback"
+    else:
+        # Local development
+        return "http://127.0.0.1:5000/callback"
+
 def _create_flow():
+    """Create Google OAuth Flow - supports both file and environment variable"""
     try:
-        return Flow.from_client_secrets_file(
-            "client_secret.json",
-            scopes=OAUTH_SCOPES,
-            redirect_uri=OAUTH_REDIRECT_URI
-        )
+        # Try to load from environment variable first (for Render)
+        if os.environ.get('GOOGLE_CLIENT_SECRET_JSON'):
+            client_secret_json = os.environ.get('GOOGLE_CLIENT_SECRET_JSON')
+            import io
+            return Flow.from_client_config(
+                json.loads(client_secret_json),
+                scopes=OAUTH_SCOPES,
+                redirect_uri=_get_oauth_redirect_uri()
+            )
+        # Fall back to file (for local development)
+        elif os.path.exists("client_secret.json"):
+            return Flow.from_client_secrets_file(
+                "client_secret.json",
+                scopes=OAUTH_SCOPES,
+                redirect_uri=_get_oauth_redirect_uri()
+            )
+        else:
+            print("⚠️ Google Auth Error: client_secret.json not found and GOOGLE_CLIENT_SECRET_JSON env var not set")
+            return None
     except Exception as e:
         print(f"⚠️ Google Auth Warning: {e}")
         return None
