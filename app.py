@@ -138,13 +138,14 @@ def _create_flow():
         return None
 
 def get_db_connection():
-    """Get MySQL database connection - supports both local and Render"""
+    """Get MySQL database connection - Aiven"""
     return mysql.connector.connect(
-        host=os.environ.get('DB_HOST', 'localhost'),
-        user=os.environ.get('DB_USER', 'root'),
-        password=os.environ.get('DB_PASSWORD', ''),
-        database=os.environ.get('DB_NAME', 'mountain_view'),
-        port=int(os.environ.get('DB_PORT', 3306))
+        host='165.22.211.157',
+        user='avnadmin',
+        password='AVNS_tX-dYgQUCUNzObsCSLt',
+        database='defaultdb',
+        port=21351,
+        ssl_disabled=False
     )
 
 def get_room_statistics():
