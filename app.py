@@ -103,27 +103,33 @@ def _get_oauth_redirect_uri():
         return "http://127.0.0.1:5000/callback"
 
 def _create_flow():
-    """Create Google OAuth Flow - supports both file and environment variable"""
+    """Create Google OAuth Flow - supports file, environment variable, and Render Secret Files"""
     try:
-        # Try to load from environment variable first (for Render)
+        # Try Render Secret Files path first (highest priority)
+        secret_file_paths = [
+            "/etc/secrets/client_secret.json",  # Render Secret Files
+            "client_secret.json",                # Local development
+        ]
+        
+        for secret_path in secret_file_paths:
+            if os.path.exists(secret_path):
+                return Flow.from_client_secrets_file(
+                    secret_path,
+                    scopes=OAUTH_SCOPES,
+                    redirect_uri=_get_oauth_redirect_uri()
+                )
+        
+        # Fall back to environment variable
         if os.environ.get('GOOGLE_CLIENT_SECRET_JSON'):
             client_secret_json = os.environ.get('GOOGLE_CLIENT_SECRET_JSON')
-            import io
             return Flow.from_client_config(
                 json.loads(client_secret_json),
                 scopes=OAUTH_SCOPES,
                 redirect_uri=_get_oauth_redirect_uri()
             )
-        # Fall back to file (for local development)
-        elif os.path.exists("client_secret.json"):
-            return Flow.from_client_secrets_file(
-                "client_secret.json",
-                scopes=OAUTH_SCOPES,
-                redirect_uri=_get_oauth_redirect_uri()
-            )
-        else:
-            print("⚠️ Google Auth Error: client_secret.json not found and GOOGLE_CLIENT_SECRET_JSON env var not set")
-            return None
+        
+        print("⚠️ Google Auth Error: client_secret.json not found in any location")
+        return None
     except Exception as e:
         print(f"⚠️ Google Auth Warning: {e}")
         return None
