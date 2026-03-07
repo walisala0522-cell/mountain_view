@@ -412,7 +412,7 @@
     </div>
 </div>
 
-<div id="slipModal" class="modal-overlay" onclick="if(event.target===this) closeSlipModal()">
+<div id="slipModal" class="modal-overlay">
     <div class="modal-backdrop"></div>
     <div class="modal-content modal-image">
         <button type="button" onclick="closeSlipModal()" class="modal-close" aria-label="ปิด"><i class="fa-solid fa-times"></i></button>
@@ -668,6 +668,13 @@ function closeSlipModal() {
     document.getElementById('slipModal').classList.remove('open');
     document.body.style.overflow = '';
 }
+
+// Close modal when clicking overlay background
+document.getElementById('slipModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeSlipModal();
+    }
+});
 
 
 /* ================= cash ================= */
