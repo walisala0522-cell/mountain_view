@@ -95,12 +95,13 @@ _oauth_flows = {}
 
 def _get_oauth_redirect_uri():
     """Get OAuth redirect URI - dynamic for different environments"""
-    if os.environ.get('FLASK_ENV') == 'production':
-        # For Render: use the actual domain
-        return f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'localhost:5000')}/callback"
+    # Check if we're on Render (has /etc/secrets directory)
+    if os.path.exists('/etc/secrets/'):
+        # On Render: use the actual domain
+        return "https://mountain-view-1.onrender.com/callback"
     else:
-        # Local development
-        return "http://127.0.0.1:5000/callback"
+        # Local development - use hostname from request or default
+        return "http://localhost:5000/callback"
 
 def _create_flow():
     """Create Google OAuth Flow - supports file, environment variable, and Render Secret Files"""
