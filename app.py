@@ -92,8 +92,6 @@ OAUTH_SCOPES = [
     "openid"
 ]
 
-# Store Flow per OAuth session (state) - กัน code_verifier หายเมื่อ callback
-_oauth_flows[state] = flow_instance
 
 def _get_oauth_redirect_uri():
     """Get OAuth redirect URI - dynamic for different environments"""
