@@ -93,7 +93,7 @@ OAUTH_SCOPES = [
 ]
 
 # Store Flow per OAuth session (state) - กัน code_verifier หายเมื่อ callback
-_oauth_flows = {}
+_oauth_flows[state] = flow_instance
 
 def _get_oauth_redirect_uri():
     """Get OAuth redirect URI - dynamic for different environments"""
@@ -138,21 +138,27 @@ def _create_flow():
         return None
 
 def get_db_connection():
-    return mysql.connector.connect(
-        host=os.environ.get('DB_HOST', 'localhost'),
-        user=os.environ.get('DB_USER', 'root'),
-        password=os.environ.get('DB_PASSWORD', ''),
-        database=os.environ.get('DB_NAME', 'mountain_view'),
-        port=int(os.environ.get('DB_PORT', 3306)),
-        connection_timeout=5,
-        autocommit=True,
-        ssl_disabled=False if os.environ.get('DB_PORT') == '21351' else True
-    )
+    try:
+        return mysql.connector.connect(
+            host=os.environ.get('DB_HOST'),
+            user=os.environ.get('DB_USER'),
+            password=os.environ.get('DB_PASSWORD'),
+            database=os.environ.get('DB_NAME'),
+            port=int(os.environ.get('DB_PORT', 3306)),
+            connection_timeout=5,
+            autocommit=True
+        )
+    except Exception as e:
+        print("DB ERROR:", e)
+        return None
 
 def get_room_statistics():
     """Get consistent room statistics for all pages - checks actual bookings"""
     try:
         conn = get_db_connection()
+        if not conn:
+            return "Database error"
+
         cursor = conn.cursor(dictionary=True)
         
         cursor.execute("SELECT COUNT(*) AS c FROM rooms WHERE is_active = 1")
@@ -234,7 +240,14 @@ def admin_required(f):
 @app.route("/")
 def home():
     # Get consistent room statistics from shared helper
-    room_stats = get_room_statistics()
+    try:
+        room_stats = get_room_statistics()
+    except:
+        room_stats = {
+            "total": 0,
+            "available": 0,
+            "occupied": 0
+        }
 
     response = make_response(render_template(
         "home.html",
@@ -255,12 +268,11 @@ def login():
 
 @app.route("/login/google")
 def login_google():
-    flow_instance = _create_flow()
     if not flow_instance:
         return "Google Auth not configured", 500
     authorization_url, state = flow_instance.authorization_url()
     session["state"] = state
-    _oauth_flows[state] = flow_instance  # เก็บ flow ตาม state เพื่อใช้ code_verifier ตอน callback
+    session["flow"] = flow_instance.oauth2session.code_verifier
     return redirect(authorization_url)
 
 @app.route("/callback")
@@ -269,7 +281,7 @@ def callback():
     if not state or session.get("state") != state:
         return "State mismatch", 400
 
-    flow_instance = _oauth_flows.pop(state, None)
+    flow_instance = _create_flow()
     if not flow_instance:
         flash("Session หมดอายุ กรุณาลองเข้าสู่ระบบใหม่", "error")
         return redirect(url_for("login"))
