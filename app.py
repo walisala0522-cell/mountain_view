@@ -271,8 +271,9 @@ def login_google():
         return "Google Auth not configured", 500
     authorization_url, state = flow_instance.authorization_url()
     session["state"] = state
-    # Store code_verifier for PKCE flow
-    session["code_verifier"] = flow_instance.oauth2session._client.code_verifier
+    # Store code_verifier for PKCE flow (convert to string for session storage)
+    session["code_verifier"] = str(flow_instance.oauth2session._client.code_verifier)
+    session.modified = True
     return redirect(authorization_url)
 
 @app.route("/callback")
