@@ -144,7 +144,10 @@ def get_db_connection():
             database=os.environ.get('DB_NAME'),
             port=int(os.environ.get('DB_PORT', 3306)),
             connection_timeout=5,
-            autocommit=True
+            autocommit=True,
+            ssl_disabled=False,  # Enable SSL for Aiven
+            use_unicode=True,
+            charset='utf8mb4'
         )
     except Exception as e:
         print("DB ERROR:", e)
