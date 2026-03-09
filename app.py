@@ -112,25 +112,33 @@ def _create_flow():
             "client_secret.json",                # Local development
         ]
         
+        flow = None
         for secret_path in secret_file_paths:
             if os.path.exists(secret_path):
-                return Flow.from_client_secrets_file(
+                flow = Flow.from_client_secrets_file(
                     secret_path,
                     scopes=OAUTH_SCOPES,
                     redirect_uri=_get_oauth_redirect_uri()
                 )
+                break
         
         # Fall back to environment variable
-        if os.environ.get('GOOGLE_CLIENT_SECRET_JSON'):
+        if not flow and os.environ.get('GOOGLE_CLIENT_SECRET_JSON'):
             client_secret_json = os.environ.get('GOOGLE_CLIENT_SECRET_JSON')
-            return Flow.from_client_config(
+            flow = Flow.from_client_config(
                 json.loads(client_secret_json),
                 scopes=OAUTH_SCOPES,
                 redirect_uri=_get_oauth_redirect_uri()
             )
         
-        print("⚠️ Google Auth Error: client_secret.json not found in any location")
-        return None
+        if not flow:
+            print("⚠️ Google Auth Error: client_secret.json not found in any location")
+            return None
+        
+        # Disable PKCE to avoid "Missing code verifier" errors
+        flow.oauth2session.compliance_hook = {}
+        
+        return flow
     except Exception as e:
         print(f"⚠️ Google Auth Warning: {e}")
         return None
