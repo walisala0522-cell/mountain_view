@@ -135,9 +135,6 @@ def _create_flow():
             print("⚠️ Google Auth Error: client_secret.json not found in any location")
             return None
         
-        # Disable PKCE to avoid "Missing code verifier" errors
-        flow.oauth2session.compliance_hook = {}
-        
         return flow
     except Exception as e:
         print(f"⚠️ Google Auth Warning: {e}")
@@ -282,7 +279,8 @@ def login_google():
         flash("Google Auth ยังไม่ได้ตั้งค่า โปรดติดต่อผู้ดูแลระบบ", "error")
         return redirect(url_for("login"))
     
-    authorization_url, state = flow_instance.authorization_url()
+    # Generate authorization URL without PKCE (code_challenge)
+    authorization_url, state = flow_instance.authorization_url(code_challenge=None)
     session["state"] = state
     session.modified = True
     return redirect(authorization_url)
