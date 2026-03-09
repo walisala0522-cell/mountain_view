@@ -266,6 +266,7 @@ def login():
 
 @app.route("/login/google")
 def login_google():
+    flow_instance = _create_flow()
     if not flow_instance:
         return "Google Auth not configured", 500
     authorization_url, state = flow_instance.authorization_url()
