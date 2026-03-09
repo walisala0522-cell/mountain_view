@@ -271,6 +271,8 @@ def login_google():
         return "Google Auth not configured", 500
     authorization_url, state = flow_instance.authorization_url()
     session["state"] = state
+    # Store code_verifier for PKCE flow
+    session["code_verifier"] = flow_instance.oauth2session._client.code_verifier
     return redirect(authorization_url)
 
 @app.route("/callback")
@@ -283,6 +285,11 @@ def callback():
     if not flow_instance:
         flash("Session หมดอายุ กรุณาลองเข้าสู่ระบบใหม่", "error")
         return redirect(url_for("login"))
+
+    # Restore code_verifier for PKCE flow
+    code_verifier = session.get("code_verifier")
+    if code_verifier:
+        flow_instance.oauth2session._client.code_verifier = code_verifier
 
     flow_instance.fetch_token(authorization_response=request.url)
     credentials = flow_instance.credentials
