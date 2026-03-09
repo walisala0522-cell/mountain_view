@@ -138,13 +138,14 @@ def _create_flow():
         return None
 
 def get_db_connection():
-    """Get MySQL database connection - supports Aiven and local"""
     return mysql.connector.connect(
         host=os.environ.get('DB_HOST', 'localhost'),
         user=os.environ.get('DB_USER', 'root'),
         password=os.environ.get('DB_PASSWORD', ''),
         database=os.environ.get('DB_NAME', 'mountain_view'),
         port=int(os.environ.get('DB_PORT', 3306)),
+        connection_timeout=5,
+        autocommit=True,
         ssl_disabled=False if os.environ.get('DB_PORT') == '21351' else True
     )
 
@@ -1250,6 +1251,10 @@ def confirm_cash_payment(id):
     else:
         flash("ไม่พบรายการหรือไม่ใช่การจองแบบเงินสด", "error")
     return redirect(url_for("admin"))
+
+@app.route("/health")
+def health():
+    return "ok"
 
 @app.errorhandler(404)
 def not_found(e):
