@@ -271,11 +271,11 @@ def login():
 def login_google():
     flow_instance = _create_flow()
     if not flow_instance:
-        return "Google Auth not configured", 500
+        flash("Google Auth ยังไม่ได้ตั้งค่า โปรดติดต่อผู้ดูแลระบบ", "error")
+        return redirect(url_for("login"))
+    
     authorization_url, state = flow_instance.authorization_url()
     session["state"] = state
-    # Store code_verifier for PKCE flow (convert to string for session storage)
-    session["code_verifier"] = str(flow_instance.oauth2session._client.code_verifier)
     session.modified = True
     return redirect(authorization_url)
 
@@ -283,31 +283,35 @@ def login_google():
 def callback():
     state = request.args.get("state")
     if not state or session.get("state") != state:
-        return "State mismatch", 400
-
-    flow_instance = _create_flow()
-    if not flow_instance:
-        flash("Session หมดอายุ กรุณาลองเข้าสู่ระบบใหม่", "error")
+        flash("State validation failed. Please try logging in again.", "error")
         return redirect(url_for("login"))
 
-    # Restore code_verifier for PKCE flow
-    code_verifier = session.get("code_verifier")
-    if code_verifier:
-        flow_instance.oauth2session._client.code_verifier = code_verifier
+    try:
+        flow_instance = _create_flow()
+        if not flow_instance:
+            flash("Session หมดอายุ กรุณาลองเข้าสู่ระบบใหม่", "error")
+            return redirect(url_for("login"))
 
-    flow_instance.fetch_token(authorization_response=request.url)
-    credentials = flow_instance.credentials
-    userinfo = requests.get(
-        "https://www.googleapis.com/oauth2/v2/userinfo",
-        headers={"Authorization": f"Bearer {credentials.token}"}
-    ).json()
+        flow_instance.fetch_token(authorization_response=request.url)
+        credentials = flow_instance.credentials
+        
+        userinfo = requests.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {credentials.token}"}
+        ).json()
 
-    name = userinfo.get("name")
-    email = userinfo.get("email")
-    google_id = userinfo.get("id")
+        name = userinfo.get("name")
+        email = userinfo.get("email")
+        google_id = userinfo.get("id")
 
-    if not email:
-        return "Email not available", 400
+        if not email:
+            flash("ไม่สามารถอ่านอีเมล จากบัญชี Google ของคุณ", "error")
+            return redirect(url_for("login"))
+    
+    except Exception as e:
+        print(f"OAuth Error: {e}")
+        flash(f"เกิดข้อผิดพลาดในการเข้าสู่ระบบ: {str(e)}", "error")
+        return redirect(url_for("login"))
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
