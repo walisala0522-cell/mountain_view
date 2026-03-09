@@ -271,7 +271,6 @@ def login_google():
         return "Google Auth not configured", 500
     authorization_url, state = flow_instance.authorization_url()
     session["state"] = state
-    session["flow"] = flow_instance.oauth2session.code_verifier
     return redirect(authorization_url)
 
 @app.route("/callback")
