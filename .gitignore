@@ -1,2 +1,5 @@
 client_secret.json 
 client_secret.json 
+client_secret*.json
+.env
+__pycache__/
