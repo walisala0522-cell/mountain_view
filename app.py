@@ -1,32 +1,45 @@
-import uuid
-from flask import Flask, render_template, request, redirect, session, url_for, flash, make_response, has_request_context
-from google_auth_oauthlib.flow import Flow
-import requests
-import os
-import mysql.connector
-from functools import wraps
-from datetime import datetime, date, timedelta
-from werkzeug.utils import secure_filename
-import json
-import tempfile
+try:
+    import uuid
+    from flask import Flask, render_template, request, redirect, session, url_for, flash, make_response, has_request_context
+    from google_auth_oauthlib.flow import Flow
+    import requests
+    import os
+    import mysql.connector
+    from functools import wraps
+    from datetime import datetime, date, timedelta
+    from werkzeug.utils import secure_filename
+    import json
+    import tempfile
 
-import qrcode
+    import qrcode
 
-app = Flask(__name__)
-app.secret_key = "mountainview_secret"
-UPLOAD_FOLDER = 'static/slips'
-ROOM_IMAGES_FOLDER = 'static/room_images'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['ROOM_IMAGES_FOLDER'] = ROOM_IMAGES_FOLDER
+    print("🚀 App starting... imports successful")
 
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs(app.config['ROOM_IMAGES_FOLDER'], exist_ok=True)
-os.makedirs('static/qr', exist_ok=True)
+    app = Flask(__name__)
+    app.secret_key = "mountainview_secret"
+    UPLOAD_FOLDER = 'static/slips'
+    ROOM_IMAGES_FOLDER = 'static/room_images'
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    app.config['ROOM_IMAGES_FOLDER'] = ROOM_IMAGES_FOLDER
 
-ADMIN_EMAIL = "mountainview.bungalow0522@gmail.com"
-# Only allow insecure transport for local development
-if os.environ.get('FLASK_ENV') != 'production':
-    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['ROOM_IMAGES_FOLDER'], exist_ok=True)
+    os.makedirs('static/qr', exist_ok=True)
+
+    ADMIN_EMAIL = "mountainview.bungalow0522@gmail.com"
+    # Only allow insecure transport for local development
+    if os.environ.get('FLASK_ENV') != 'production':
+        os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+
+    print("🚀 App initialized successfully")
+
+    # BUSINESS_INFO and other constants...
+
+except Exception as e:
+    print(f"❌ App startup error: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
 
 # ข้อมูลธุรกิจ - แก้ที่นี่ทีเดียว ใช้ทั้งเว็บ
 BUSINESS_INFO = {
