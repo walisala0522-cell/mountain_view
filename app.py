@@ -355,14 +355,27 @@ def callback():
                     "INSERT INTO users (name, email, role, google_id) VALUES (%s, %s, %s, %s)",
                     (name, email, role, google_id)
                 )
-            except Exception:
-                cursor.execute(
-                    "INSERT INTO users (name, email, role) VALUES (%s, %s, %s)",
-                    (name, email, role)
-                )
-            conn.commit()
+                conn.commit()
+                print(f"✅ New user inserted: {name} ({email}) with role {role}")
+            except Exception as e:
+                print(f"⚠️ Insert with google_id failed: {e}, trying without google_id")
+                try:
+                    cursor.execute(
+                        "INSERT INTO users (name, email, role) VALUES (%s, %s, %s)",
+                        (name, email, role)
+                    )
+                    conn.commit()
+                    print(f"✅ New user inserted (no google_id): {name} ({email}) with role {role}")
+                except Exception as e2:
+                    print(f"❌ Insert failed completely: {e2}")
+                    flash("เกิดปัญหาภายในระบบ กรุณาลองใหม่อีกครั้ง", "error")
+                    return redirect(url_for("login"))
             cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
             user = cursor.fetchone()
+            if not user:
+                print(f"❌ User not found after insert for {email}")
+                flash("เกิดปัญหาภายในระบบ กรุณาลองใหม่อีกครั้ง", "error")
+                return redirect(url_for("login"))
 
         # Update google_id if missing (column must exist)
         if not user.get('google_id') and google_id:
