@@ -1,5 +1,5 @@
 import uuid
-from flask import Flask, render_template, request, redirect, session, url_for, flash, make_response
+from flask import Flask, render_template, request, redirect, session, url_for, flash, make_response, has_request_context
 from google_auth_oauthlib.flow import Flow
 import requests
 import os
@@ -94,18 +94,25 @@ OAUTH_SCOPES = [
 
 
 def _get_oauth_redirect_uri():
-    """Get OAuth redirect URI - dynamic for different environments"""
+    """Get OAuth redirect URI - dynamic for different environments."""
     # Prefer explicit hostname from Render environment (recommended)
     render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
     if render_host:
         return f"https://{render_host}/callback"
+
+    # Use current request host if available (helps with dynamic domains / proxies)
+    if has_request_context():
+        proto = request.headers.get("X-Forwarded-Proto") or request.scheme
+        proto = proto.split(",")[0] if proto else "https"
+        host = request.host
+        return f"{proto}://{host}/callback"
 
     # Check if we're on Render (has /etc/secrets directory)
     if os.path.exists('/etc/secrets/'):
         # On Render: use the actual domain (fallback)
         return "https://mountain-view-1.onrender.com/callback"
 
-    # Local development - use hostname from request or default
+    # Local development - fallback to localhost
     return "http://localhost:5000/callback"
 
 def _create_flow():
@@ -303,6 +310,12 @@ def callback():
             flash("Session หมดอายุ กรุณาลองเข้าสู่ระบบใหม่", "error")
             return redirect(url_for("login"))
 
+        # Debug: log redirect URI vs request URL for troubleshooting invalid_grant
+        try:
+            print("OAuth callback: redirect_uri=", flow_instance.redirect_uri, "request.url=", request.url)
+        except Exception:
+            pass
+
         flow_instance.fetch_token(authorization_response=request.url)
         credentials = flow_instance.credentials
         
@@ -325,37 +338,47 @@ def callback():
         return redirect(url_for("login"))
 
     conn = get_db_connection()
+    if not conn:
+        # Database connection problem (e.g., missing env vars or unreachable DB)
+        flash("เกิดปัญหาการเชื่อมต่อฐานข้อมูล กรุณาลองใหม่อีกครั้ง", "error")
+        return redirect(url_for("login"))
+
     cursor = conn.cursor(dictionary=True)
-
-    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-    user = cursor.fetchone()
-
-    if not user:
-        role = "admin" if email == ADMIN_EMAIL else "customer"
-        try:
-            cursor.execute(
-                "INSERT INTO users (name, email, role, google_id) VALUES (%s, %s, %s, %s)",
-                (name, email, role, google_id)
-            )
-        except Exception:
-            cursor.execute(
-                "INSERT INTO users (name, email, role) VALUES (%s, %s, %s)",
-                (name, email, role)
-            )
-        conn.commit()
+    try:
         cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
-    
-    # Update google_id if missing (column must exist)
-    if not user.get('google_id') and google_id:
-        try:
-            cursor.execute("UPDATE users SET google_id = %s WHERE id = %s", (google_id, user['id']))
-            conn.commit()
-        except Exception:
-            pass
 
-    cursor.close()
-    conn.close()
+        if not user:
+            role = "admin" if email == ADMIN_EMAIL else "customer"
+            try:
+                cursor.execute(
+                    "INSERT INTO users (name, email, role, google_id) VALUES (%s, %s, %s, %s)",
+                    (name, email, role, google_id)
+                )
+            except Exception:
+                cursor.execute(
+                    "INSERT INTO users (name, email, role) VALUES (%s, %s, %s)",
+                    (name, email, role)
+                )
+            conn.commit()
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+
+        # Update google_id if missing (column must exist)
+        if not user.get('google_id') and google_id:
+            try:
+                cursor.execute("UPDATE users SET google_id = %s WHERE id = %s", (google_id, user['id']))
+                conn.commit()
+            except Exception:
+                pass
+
+    except Exception as e:
+        print(f"DB Error during login callback: {e}")
+        flash("เกิดปัญหาภายในระบบ กรุณาลองใหม่อีกครั้ง", "error")
+        return redirect(url_for("login"))
+    finally:
+        cursor.close()
+        conn.close()
 
     session["user"] = user
     session["user_id"] = user["id"] # Important for bookings
