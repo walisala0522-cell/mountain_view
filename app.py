@@ -349,7 +349,7 @@ def callback():
         user = cursor.fetchone()
 
         if not user:
-            role = "admin" if email == ADMIN_EMAIL else "customer"
+            role = "admin" if email == ADMIN_EMAIL else "user"
             try:
                 cursor.execute(
                     "INSERT INTO users (name, email, role, google_id) VALUES (%s, %s, %s, %s)",
