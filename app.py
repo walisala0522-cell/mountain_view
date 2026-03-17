@@ -352,8 +352,8 @@ def callback():
             role = "admin" if email == ADMIN_EMAIL else "user"
             try:
                 cursor.execute(
-                    "INSERT INTO users (name, email, role, google_id) VALUES (%s, %s, %s, %s)",
-                    (name, email, role, google_id)
+                    "INSERT INTO users (name, email, role, google_id, password) VALUES (%s, %s, %s, %s, %s)",
+                    (name, email, role, google_id, 'google_login')
                 )
                 conn.commit()
                 print(f"✅ New user inserted: {name} ({email}) with role {role}")
@@ -361,8 +361,8 @@ def callback():
                 print(f"⚠️ Insert with google_id failed: {e}, trying without google_id")
                 try:
                     cursor.execute(
-                        "INSERT INTO users (name, email, role) VALUES (%s, %s, %s)",
-                        (name, email, role)
+                        "INSERT INTO users (name, email, role, password) VALUES (%s, %s, %s, %s)",
+                        (name, email, role, 'google_login')
                     )
                     conn.commit()
                     print(f"✅ New user inserted (no google_id): {name} ({email}) with role {role}")
