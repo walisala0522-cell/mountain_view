@@ -167,18 +167,38 @@ def _create_flow():
 
 def get_db_connection():
     try:
-        return mysql.connector.connect(
-            host=os.environ.get('DB_HOST'),
-            user=os.environ.get('DB_USER'),
-            password=os.environ.get('DB_PASSWORD'),
-            database=os.environ.get('DB_NAME'),
-            port=int(os.environ.get('DB_PORT', 3306)),
-            connection_timeout=5,
-            autocommit=True,
-            ssl_disabled=False,  # Enable SSL for Aiven
-            use_unicode=True,
-            charset='utf8mb4'
-        )
+        import mysql.connector
+        import os
+
+        # ถ้ามี DB_HOST = ใช้ env (Aiven / production)
+        if os.environ.get("DB_HOST"):
+            return mysql.connector.connect(
+                host=os.environ.get('DB_HOST'),
+                user=os.environ.get('DB_USER'),
+                password=os.environ.get('DB_PASSWORD'),
+                database=os.environ.get('DB_NAME'),
+                port=int(os.environ.get('DB_PORT', 3306)),
+                ssl_disabled=False,   # ใช้ SSL (Aiven)
+                connection_timeout=5,
+                autocommit=True,
+                use_unicode=True,
+                charset='utf8mb4'
+            )
+        else:
+            # fallback → local MySQL
+            return mysql.connector.connect(
+                host="localhost",
+                user="appuser",        # 👈 แก้ให้ตรงของคุณ
+                password="1234",       # 👈 แก้ให้ตรงของคุณ
+                database="mountain_view",
+                port=3306,
+                ssl_disabled=True,     # local ไม่ต้อง SSL
+                connection_timeout=5,
+                autocommit=True,
+                use_unicode=True,
+                charset='utf8mb4'
+            )
+
     except Exception as e:
         print("DB ERROR:", e)
         return None
@@ -1341,6 +1361,81 @@ def confirm_cash_payment(id):
 def health():
     return "ok"
 
+@app.route("/admin/restore-db", methods=["POST"])
+def restore_db_endpoint():
+    """Restore database from mountain_view.sql (admin only via password)"""
+    # Simple password protection (not secure, replace with proper auth if needed)
+    password = request.form.get("password", "")
+    if password != "restore2026":  # Change this password!
+        flash("❌ รหัสผ่านไม่ถูกต้อง", "error")
+        return redirect(url_for("home"))
+    
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return "❌ Database connection failed", 500
+        
+        cursor = conn.cursor()
+        
+        # Read SQL dump file
+        sql_file = 'database/mountain_view.sql'
+        print(f"📖 Reading {sql_file}...")
+        
+        with open(sql_file, 'r', encoding='utf-8') as f:
+            sql_content = f.read()
+        
+        # Parse and execute SQL statements
+        statements = []
+        current_statement = ''
+        
+        for line in sql_content.split('\n'):
+            # Skip comments
+            if line.strip().startswith('--') or line.strip().startswith('/*'):
+                continue
+            
+            current_statement += line + '\n'
+            
+            if ';' in line:
+                statements.append(current_statement.strip())
+                current_statement = ''
+        
+        if current_statement.strip():
+            statements.append(current_statement.strip())
+        
+        # Execute statements
+        executed = 0
+        skipped = 0
+        
+        for statement in statements:
+            if not statement or statement.startswith('/*') or statement.startswith('--'):
+                skipped += 1
+                continue
+            
+            try:
+                cursor.execute(statement)
+                executed += 1
+            except Exception as e:
+                # Some statements may fail (e.g., DROP IF EXISTS)
+                skipped += 1
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        msg = f"✅ Database restore completed!\n• Executed: {executed} statements\n• Skipped: {skipped} statements"
+        print(msg)
+        flash(msg, "success")
+        return redirect(url_for("home"))
+        
+    except FileNotFoundError as e:
+        msg = f"❌ Error: database/mountain_view.sql not found"
+        flash(msg, "error")
+        return redirect(url_for("home"))
+    except Exception as e:
+        msg = f"❌ Database error: {str(e)}"
+        flash(msg, "error")
+        return redirect(url_for("home"))
+
 @app.errorhandler(404)
 def not_found(e):
     return render_template("404.html"), 404
@@ -1350,4 +1445,4 @@ def server_error(e):
     return render_template("500.html"), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
