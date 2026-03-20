@@ -123,7 +123,7 @@ def _get_oauth_redirect_uri():
     # Check if we're on Render (has /etc/secrets directory)
     if os.path.exists('/etc/secrets/'):
         # On Render: use the actual domain (fallback)
-        return "https://mountain-view-1.onrender.com/callback"
+        return "https://mountainview.click/callback"
 
     # Local development - fallback to localhost
     return "http://localhost:5000/callback"

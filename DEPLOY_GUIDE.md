@@ -22,9 +22,8 @@ git push origin main
 5. เลือก **Web application**
 6. ใน **Authorized redirect URIs** เพิ่ม:
    ```
-   https://mountain-view-1.onrender.com/callback
+   https://mountainview.click/callback
    ```
-   (แทน `mountain-view-1` ด้วยชื่อจริงของแอปใน Render)
 
 7. ดาวน์โหลด JSON credentials
 8. คัดลอกเนื้อหาทั้งหมดของไฟล์ JSON นั้น
@@ -40,7 +39,7 @@ git push origin main
 | `GOOGLE_CLIENT_SECRET_JSON` | (วาง JSON content ที่คัดลอกจาก Google Cloud) |
 | `FLASK_ENV` | `production` |
 | `DATABASE_URL` | (MySQL connection string) |
-| `RENDER_EXTERNAL_HOSTNAME` | (ชื่อ domain ของ Render - เช่น mountain-view-1.onrender.com) |
+| `RENDER_EXTERNAL_HOSTNAME` | `mountainview.click` |
 
 :warning: **สำคัญ:** Environment Variable จะเก็บ credentials อย่างปลอดภัย
 
@@ -73,7 +72,7 @@ DB_NAME=mountain_view
 
 ## 5. ทดสอบ Google Login
 
-1. ไปที่ https://mountain-view-1.onrender.com/login
+1. ไปที่ https://mountainview.click/login
 2. คลิก **Login with Google**
 3. ถ้าสำเร็จ ก็จะ login เข้าระบบได้
 
